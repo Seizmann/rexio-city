@@ -15,12 +15,26 @@
   text-align: center;
 }
 
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.brandIcon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
 .logo {
   font-size: 2.25rem;
   font-weight: 800;
   color: var(--accent);
   letter-spacing: -0.03em;
-  margin-bottom: var(--space-2);
 }
 
 .tagline {
@@ -92,6 +106,15 @@
     text-align: left;
     max-width: 400px;
     margin-bottom: 0;
+  }
+
+  .brandRow {
+    justify-content: flex-start;
+  }
+
+  .brandIcon {
+    width: 52px;
+    height: 52px;
   }
 
   .logo {

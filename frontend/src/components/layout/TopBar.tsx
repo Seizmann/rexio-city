@@ -36,7 +36,8 @@ export default function TopBar() {
   return (
     <header className={styles.topbar}>
       <Link href={ROUTES.HOME} className={styles.logo}>
-        RexiO City
+        <img src="/icon.webp" alt="RexiO City Icon" className={styles.logoIcon} />
+        <span>RexiO City</span>
       </Link>
 
       <div className={styles.actions}>

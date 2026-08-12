@@ -98,7 +98,10 @@ export default function LandingAuth() {
   return (
     <div className={styles.landingContainer} suppressHydrationWarning>
       <div className={styles.hero} suppressHydrationWarning>
-        <h1 className={styles.logo}>RexiO City</h1>
+        <div className={styles.brandRow} suppressHydrationWarning>
+          <img src="/icon.webp" alt="RexiO City Icon" className={styles.brandIcon} />
+          <h1 className={styles.logo}>RexiO City</h1>
+        </div>
         <p className={styles.tagline}>
           Happening now. Join the conversation today.
         </p>
