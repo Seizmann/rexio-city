@@ -551,7 +551,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
-  - **Follow Counts Key Mismatch Fix**: Updated `GetFollowCounts` and `UserProfile` in Go backend to return both `followers`/`following` and `follower_count`/`following_count` keys, and added dual-key fallback resolution in `ProfileHeader.tsx`, fixing the issue where follower/following numbers weren't displaying.
+  - **Comment Author Preload Fix**: Added `User User gorm:"foreignKey:UserID"` to `Comment` model and chained `.Preload("User")` in `GetPostComments` and `CommentOnPost` in Go backend, plus added fallback to logged-in `authUser` in `CommentSheet.tsx`, fixing blank/Anonymous comment author display.
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:

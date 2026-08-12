@@ -225,7 +225,7 @@ func (s *PostService) UnlikePost(postID uint, userID uint) error {
 	return nil
 }
 
-// CommentOnPost adds a comment to a post
+// CommentOnPost adds a comment to a post and preloads author User relation
 func (s *PostService) CommentOnPost(postID uint, userID uint, content string, parentID *uint) (*models.Comment, error) {
 	if len(content) == 0 {
 		return nil, fmt.Errorf("comment content cannot be empty")
@@ -247,13 +247,17 @@ func (s *PostService) CommentOnPost(postID uint, userID uint, content string, pa
 		return nil, fmt.Errorf("failed to create comment: %w", err)
 	}
 
+	// Preload author user info before returning
+	db.GetDB().Preload("User").First(&comment, comment.ID)
+
 	return &comment, nil
 }
 
-// GetPostComments retrieves comments for a post
+// GetPostComments retrieves comments for a post with preloaded author User relation
 func (s *PostService) GetPostComments(postID uint) ([]models.Comment, error) {
 	var comments []models.Comment
-	db.GetDB().Where("post_id = ?", postID).
+	db.GetDB().Preload("User").
+		Where("post_id = ?", postID).
 		Order("created_at ASC").
 		Find(&comments)
 	return comments, nil

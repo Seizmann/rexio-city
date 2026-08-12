@@ -7,6 +7,7 @@ import { API } from '@/lib/constants';
 import type { Comment, User } from '@/lib/types';
 import { relativeTime } from '@/lib/time';
 import Button from '@/components/ui/Button';
+import { useAuth } from '@/context/AuthContext';
 
 interface CommentSheetProps {
   postId: number;
@@ -21,6 +22,7 @@ export default function CommentSheet({
   onClose,
   onCommentAdded,
 }: CommentSheetProps) {
+  const { user: authUser } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
@@ -57,7 +59,11 @@ export default function CommentSheet({
     try {
       const res = await api.post<Comment>(API.POST_COMMENTS(postId), { content });
       if (res.success && res.data) {
-        setComments((prev) => [res.data, ...prev]);
+        const createdComment = res.data;
+        if (!createdComment.user && authUser) {
+          createdComment.user = authUser;
+        }
+        setComments((prev) => [...prev, createdComment]);
         setContent('');
         if (onCommentAdded) onCommentAdded();
       }
@@ -111,18 +117,24 @@ export default function CommentSheet({
           ) : (
             <div className={styles.commentList}>
               {comments.map((comment) => {
-                const author: User = comment.user || {
-                  id: comment.user_id,
-                  username: 'user',
-                  display_name: 'Anonymous',
-                };
+                const author: User =
+                  comment.user && comment.user.username
+                    ? comment.user
+                    : authUser && authUser.id === comment.user_id
+                    ? authUser
+                    : {
+                        id: comment.user_id,
+                        username: comment.user?.username || 'user',
+                        display_name:
+                          comment.user?.display_name || comment.user?.username || 'User',
+                      };
 
                 return (
                   <div key={comment.id} className={styles.comment}>
                     {author.avatar_url ? (
                       <img
                         src={author.avatar_url}
-                        alt={author.display_name}
+                        alt={author.display_name || author.username}
                         className={styles.avatar}
                       />
                     ) : (
