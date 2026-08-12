@@ -53,23 +53,23 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 /* ── Provider ─────────────────────────────────────────────────── */
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Initialize state directly from storage to avoid synchronous setState inside useEffect
-  const [state, setState] = useState<AuthState>(() => {
-    if (typeof window === 'undefined') {
-      return { user: null, isLoading: true, isAuthenticated: false };
-    }
-    const token = getAccessToken();
-    if (!token) {
-      return { user: null, isLoading: false, isAuthenticated: false };
-    }
-    const cached = getStoredUser() as User | null;
-    return { user: cached, isLoading: true, isAuthenticated: !!cached };
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isLoading: true,
+    isAuthenticated: false,
   });
 
-  // Verify auth token with backend on mount
+  // Hydrate auth state on mount (client-side only)
   useEffect(() => {
     const token = getAccessToken();
-    if (!token) return;
+    if (!token) {
+      void Promise.resolve().then(() => {
+        setState({ user: null, isLoading: false, isAuthenticated: false });
+      });
+      return;
+    }
+
+    const cached = getStoredUser() as User | null;
 
     api
       .get<User>(API.USERS_ME)
@@ -83,8 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        clearTokens();
-        setState({ user: null, isLoading: false, isAuthenticated: false });
+        if (cached) {
+          setState({ user: cached, isLoading: false, isAuthenticated: true });
+        } else {
+          clearTokens();
+          setState({ user: null, isLoading: false, isAuthenticated: false });
+        }
       });
   }, []);
 
