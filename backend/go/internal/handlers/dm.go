@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -159,60 +160,37 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 func (h *DMHandler) ConnectWS(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	
-	// Upgrade connection to WebSocket
-	conn, err := websocket.Upgrade(c, nil, nil, 1024, 1024)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "WEBSOCKET_ERROR", "message": err.Error()},
-		})
-	}
+	// Use websocket.New for Fiber integration
+	return websocket.New(func(c *websocket.Conn) {
+		// Create connection
+		dmConn := &services.DMConnection{
+			ID:     fmt.Sprintf("ws_%d", userID),
+			UserID: userID,
+			Conn:   c,
+			Send:   make(chan []byte, 256),
+		}
 
-	// Create connection
-	dmConn := &services.DMConnection{
-		ID:     fmt.Sprintf("ws_%d", userID),
-		UserID: userID,
-		Conn:   conn,
-		Send:   make(chan []byte, 256),
-	}
+		h.mu.Lock()
+		h.wsClients[dmConn.ID] = dmConn
+		h.mu.Unlock()
 
-	h.mu.Lock()
-	h.wsClients[dmConn.ID] = dmConn
-	h.mu.Unlock()
+		// Send welcome message
+		c.WriteMessage(websocket.TextMessage, []byte(`{"type":"connected","user_id":`+fmt.Sprintf("%d", userID)+`}`))
 
-	// Send welcome message
-	conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connected","user_id":`+fmt.Sprintf("%d", userID)+`}`))
-
-	// Handle incoming messages
-	go func() {
+		// Handle incoming messages
 		for {
-			_, message, err := conn.ReadMessage()
+			_, message, err := c.ReadMessage()
 			if err != nil {
 				h.mu.Lock()
 				delete(h.wsClients, dmConn.ID)
 				h.mu.Unlock()
-				conn.Close()
+				c.Close()
 				break
 			}
 			// Process message
 			h.handleWSMessage(dmConn, message)
 		}
-	}()
-
-	// Handle outgoing messages
-	go func() {
-		for message := range dmConn.Send {
-			if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
-				h.mu.Lock()
-				delete(h.wsClients, dmConn.ID)
-				h.mu.Unlock()
-				conn.Close()
-				break
-			}
-		}
-	}()
-
-	return nil
+	}, websocket.Config{})(c)
 }
 
 // handleWSMessage handles incoming WebSocket messages
