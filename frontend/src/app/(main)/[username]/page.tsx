@@ -14,7 +14,8 @@ import styles from './page.module.css';
 
 export default function ProfilePage() {
   const params = useParams();
-  const username = params.username as string;
+  const rawUsername = params.username as string;
+  const username = rawUsername?.startsWith('@') ? rawUsername.slice(1) : rawUsername;
   const { user: authUser } = useAuth();
 
   const [user, setUser] = useState<User | null>(null);

@@ -51,7 +51,7 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   SIGNUP: '/signup',
-  PROFILE: (username: string) => `/profile/${username}`,
+  PROFILE: (username: string) => `/${username.startsWith('@') ? username.slice(1) : username}`,
   POST: (id: number | string) => `/post/${id}`,
   MESSAGES: '/messages',
   NOTIFICATIONS: '/notifications',
