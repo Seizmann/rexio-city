@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import styles from './PostComposer.module.css';
 import { useAuth } from '@/context/AuthContext';
-import type { Post } from '@/lib/types';
 import Button from '@/components/ui/Button';
 
 interface PostComposerProps {

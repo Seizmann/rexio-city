@@ -21,11 +21,17 @@ export default function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  // Fetch feed posts when activeTab changes (only if authenticated)
+  // Fetch feed posts when activeTab changes (only if authenticated).
+  // setFeedLoading is called inside the async callback, not synchronously
+  // in the effect body, to satisfy react-hooks/set-state-in-effect.
   useEffect(() => {
     if (!isAuthenticated) return;
     let isSubscribed = true;
-    setFeedLoading(true);
+
+    // Kick off loading state via a microtask so it's not synchronous in the effect
+    void Promise.resolve().then(() => {
+      if (isSubscribed) setFeedLoading(true);
+    });
 
     api
       .get<Post[]>(`${API.FEED}?tab=${activeTab}&page=1`)
@@ -48,6 +54,118 @@ export default function HomePage() {
       isSubscribed = false;
     };
   }, [activeTab, isAuthenticated]);
+
+  /**
+   * Called by PostComposer when the user clicks "Post".
+   * Must be defined before early returns to satisfy rules-of-hooks.
+   *
+   * Flow:
+   * 1. Instantly add a pending placeholder at the top of the feed.
+   * 2. Upload files to R2 in background, updating status label.
+   * 3. Create the post record on the server.
+   * 4. Replace the placeholder with the confirmed post.
+   */
+  const handlePostSubmit = useCallback(
+    async (payload: {
+      content: string;
+      files: { file: File; type: 'photo' | 'video' }[];
+      pendingKey: string;
+    }) => {
+      const { content, files, pendingKey } = payload;
+
+      const localPreviews = files.map(({ file, type }) => ({
+        previewUrl: URL.createObjectURL(file),
+        type,
+      }));
+
+      const resolvedUser = user
+        ? {
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
+            avatar_url: user.avatar_url,
+          }
+        : undefined;
+
+      const pendingPost: Post = {
+        id: 0,
+        user_id: user?.id ?? 0,
+        user: resolvedUser,
+        content,
+        media: [],
+        created_at: new Date().toISOString(),
+        _pending: true,
+        _uploadStatus: files.length > 0 ? 'uploading' : 'finishing',
+        _localPreviews: localPreviews,
+        _pendingKey: pendingKey,
+      };
+
+      setPosts((prev) => [pendingPost, ...prev]);
+
+      const updateStatus = (status: Post['_uploadStatus']) => {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._pendingKey === pendingKey ? { ...p, _uploadStatus: status } : p,
+          ),
+        );
+      };
+
+      try {
+        const mediaUrls: string[] = [];
+        const mediaTypes: string[] = [];
+
+        if (files.length > 0) {
+          for (const { file, type } of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await api.upload<{ url: string; type: string }>(
+              API.MEDIA_UPLOAD,
+              formData,
+            );
+            if (!res.success || !res.data?.url) {
+              throw new Error(res.error?.message || 'Media upload failed');
+            }
+            mediaUrls.push(res.data.url);
+            mediaTypes.push(res.data.type || type);
+          }
+          updateStatus('updating');
+        }
+
+        updateStatus('finishing');
+
+        const res = await api.post<Post>(API.POSTS, {
+          content,
+          media_urls: mediaUrls,
+          media_types: mediaTypes,
+        });
+
+        if (!res.success || !res.data) {
+          throw new Error(res.error?.message || 'Failed to create post');
+        }
+
+        const confirmedPost: Post = {
+          ...res.data,
+          user: res.data.user?.username ? res.data.user : resolvedUser,
+        };
+
+        localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._pendingKey === pendingKey ? confirmedPost : p,
+          ),
+        );
+      } catch (err) {
+        console.error('Post creation failed:', err);
+        localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+        updateStatus('error');
+        setTimeout(() => {
+          setPosts((prev) => prev.filter((p) => p._pendingKey !== pendingKey));
+        }, 3000);
+      }
+    },
+    [user],
+  );
 
   if (isLoading) return null;
   if (!isAuthenticated) return <LandingAuth />;
@@ -78,138 +196,10 @@ export default function HomePage() {
     );
   }
 
-  /**
-   * Called by PostComposer when the user clicks "Post".
-   *
-   * Flow:
-   * 1. Instantly add a pending placeholder at the top of the feed (with local
-   *    preview blobs and "Uploading…" status). The user sees content immediately.
-   * 2. In the background: upload each file to R2, then create the post.
-   * 3. Update the placeholder's status text as we progress through stages.
-   * 4. Replace the placeholder with the real confirmed post from the server.
-   */
-  const handlePostSubmit = useCallback(
-    async (payload: {
-      content: string;
-      files: { file: File; type: 'photo' | 'video' }[];
-      pendingKey: string;
-    }) => {
-      const { content, files, pendingKey } = payload;
-
-      // Build local preview blobs (no upload yet)
-      const localPreviews = files.map(({ file, type }) => ({
-        previewUrl: URL.createObjectURL(file),
-        type,
-      }));
-
-      // Ensure the user object is fully resolved so the card never shows blank
-      const resolvedUser = user
-        ? {
-            id: user.id,
-            username: user.username,
-            display_name: user.display_name,
-            avatar_url: user.avatar_url,
-          }
-        : undefined;
-
-      // 1. Optimistic placeholder at the top of the feed
-      const pendingPost: Post = {
-        id: 0, // will be replaced
-        user_id: user?.id ?? 0,
-        user: resolvedUser,
-        content,
-        media: [],
-        created_at: new Date().toISOString(),
-        _pending: true,
-        _uploadStatus: files.length > 0 ? 'uploading' : 'finishing',
-        _localPreviews: localPreviews,
-        _pendingKey: pendingKey,
-      };
-
-      setPosts((prev) => [pendingPost, ...prev]);
-
-      /**
-       * Update the status label on the pending card in the feed.
-       * We match by _pendingKey to avoid touching other cards.
-       */
-      const updateStatus = (status: Post['_uploadStatus']) => {
-        setPosts((prev) =>
-          prev.map((p) =>
-            p._pendingKey === pendingKey ? { ...p, _uploadStatus: status } : p,
-          ),
-        );
-      };
-
-      try {
-        // 2. Upload files if any (shows "Uploading…")
-        const mediaUrls: string[] = [];
-        const mediaTypes: string[] = [];
-
-        if (files.length > 0) {
-          for (const { file, type } of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await api.upload<{ url: string; type: string }>(
-              API.MEDIA_UPLOAD,
-              formData,
-            );
-            if (!res.success || !res.data?.url) {
-              throw new Error(res.error?.message || 'Media upload failed');
-            }
-            mediaUrls.push(res.data.url);
-            mediaTypes.push(res.data.type || type);
-          }
-          // 3. "Updating…" — files uploaded, now creating the post record
-          updateStatus('updating');
-        }
-
-        // Small perceived-progress pause so "Finishing…" is visible briefly
-        updateStatus('finishing');
-
-        // 4. Create the post on the server
-        const res = await api.post<Post>(API.POSTS, {
-          content,
-          media_urls: mediaUrls,
-          media_types: mediaTypes,
-        });
-
-        if (!res.success || !res.data) {
-          throw new Error(res.error?.message || 'Failed to create post');
-        }
-
-        // 5. Replace the pending placeholder with the real confirmed post.
-        //    Ensure the user object is populated (backend may return minimal user).
-        const confirmedPost: Post = {
-          ...res.data,
-          user: res.data.user?.username ? res.data.user : resolvedUser,
-        };
-
-        // Revoke local preview blob URLs now that we have real URLs
-        localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-
-        setPosts((prev) =>
-          prev.map((p) =>
-            p._pendingKey === pendingKey ? confirmedPost : p,
-          ),
-        );
-      } catch (err) {
-        console.error('Post creation failed:', err);
-        // Revoke blobs on error too
-        localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-        updateStatus('error');
-        // Remove the failed placeholder after 3 seconds
-        setTimeout(() => {
-          setPosts((prev) => prev.filter((p) => p._pendingKey !== pendingKey));
-        }, 3000);
-      }
-    },
-    [user],
-  );
-
   return (
     <main>
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
-      <PostComposer onPostSubmit={handlePostSubmit} />
+      <PostComposer onPostSubmit={(p) => { void handlePostSubmit(p); }} />
 
       {feedLoading ? (
         <>

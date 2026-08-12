@@ -17,15 +17,13 @@ interface PostCardProps {
 
 export default function PostCard({ post, onUpdate }: PostCardProps) {
   const router = useRouter();
+  // localPost holds optimistic action state (likes, reposts, bookmarks).
+  // We do NOT sync it from props via useEffect — instead the parent controls
+  // identity via the `key` prop (pendingKey or post id), so React remounts
+  // this component when the pending post is replaced by the confirmed one.
   const [localPost, setLocalPost] = useState<Post>(post);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-
-  // Sync from parent when the post is replaced (e.g. pending → real post)
-  // Only update if the key identity has changed (id changed, or pending cleared)
-  React.useEffect(() => {
-    setLocalPost(post);
-  }, [post]);
 
   const isPending = !!localPost._pending;
   const uploadStatus = localPost._uploadStatus;
