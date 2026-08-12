@@ -84,10 +84,12 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 	var total int64
 	query := db.GetDB().Model(&models.Post{}).Where("deleted_at IS NULL")
 
-	// Following tab: only show posts from followed users
+	// Following tab: show posts from followed users + own posts
 	if input.Tab == "following" && input.UserID > 0 {
-		query = query.Joins("INNER JOIN follows ON posts.user_id = follows.followee_id").
-			Where("follows.follower_id = ?", input.UserID)
+		var followeeIDs []uint
+		db.GetDB().Model(&models.Follow{}).Where("follower_id = ?", input.UserID).Pluck("followee_id", &followeeIDs)
+		followeeIDs = append(followeeIDs, input.UserID)
+		query = query.Where("user_id IN ?", followeeIDs)
 	}
 
 	query.Count(&total)

@@ -50,6 +50,9 @@ func Init(cfg *config.Config) {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
+	// Backfill 16-character public_id for all existing posts that do not have one yet
+	DB.Exec("UPDATE posts SET public_id = SUBSTRING(MD5(RANDOM()::text || id::text) FROM 1 FOR 16) WHERE public_id IS NULL OR public_id = ''")
+
 	log.Println("Database connected successfully")
 }
 
