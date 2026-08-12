@@ -139,47 +139,31 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 // ConnectWS handles WebSocket connection for real-time DMs
 func (h *DMHandler) ConnectWS(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
-	conn, err := websocket.Upgrder.Upgrade(c, nil, nil)
-	if err != nil {
-		return err
-	}
 
-	// Create connection
-	dmConn := &services.DMConnection{
-		ID:     fmt.Sprintf("ws_%d", userID),
-		UserID: userID,
-		Conn:   conn,
-		Send:   make(chan []byte, 256),
-	}
+	// Use websocket.New for Fiber integration
+	return websocket.New(func(c *websocket.Conn) {
+		// Create connection
+		dmConn := &services.DMConnection{
+			ID:     fmt.Sprintf("ws_%d", userID),
+			UserID: userID,
+			Conn:   c,
+			Send:   make(chan []byte, 256),
+		}
 
-	h.wsClients[dmConn.ID] = dmConn
+		h.wsClients[dmConn.ID] = dmConn
 
-	// Handle incoming messages
-	go func() {
+		// Handle incoming messages
 		for {
-			_, message, err := conn.ReadMessage()
+			_, message, err := c.ReadMessage()
 			if err != nil {
 				delete(h.wsClients, dmConn.ID)
-				conn.Close()
+				c.Close()
 				break
 			}
 			// Process message
 			h.handleWSMessage(dmConn, message)
 		}
-	}()
-
-	// Handle outgoing messages
-	go func() {
-		for message := range dmConn.Send {
-			if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
-				delete(h.wsClients, dmConn.ID)
-				conn.Close()
-				break
-			}
-		}
-	}()
-
-	return nil
+	}, websocket.Config{})(c)
 }
 
 // handleWSMessage handles incoming WebSocket messages
