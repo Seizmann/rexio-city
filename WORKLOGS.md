@@ -315,7 +315,7 @@ GET  /api/auth/health    — Health check (no auth)
 ```
 # Posts
 POST   /api/posts              — Create post
-GET    /api/posts              — List posts (feed)
+GET    /api/posts              — List posts
 GET    /api/posts/:id          — Get post
 DELETE /api/posts/:id          — Delete post
 POST   /api/posts/:id/like     — Like post
@@ -360,3 +360,102 @@ GET    /api/users/:id/is-following — Check if following
 - Post deletion requires ownership check
 - User search uses LIKE query on username/display_name
 - Next step: WebSocket server for DMs (Phase 2.5) or move to frontend integration
+
+## [2026-08-12 17:45, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested: "start implementing phase 2.5"
+- Roadmap Phase 2.5: DMs, Notifications, Media Upload
+
+### Plan for this session:
+- Implement DM service with WebSocket support
+- Implement Notification service
+- Implement Media upload service (S3/MinIO)
+- Implement Event service for triggering notifications
+- Wire up all new routes in main.go
+- Fix compilation errors and CI failures
+
+### Done:
+- Created `internal/services/dm.go` — DM service with:
+  - `NewConversation()` — Create DM conversation
+  - `SendMessage()` — Send encrypted message
+  - `GetConversations()` — List user conversations
+  - `GetMessages()` — Get conversation messages
+  - `EncryptMessage()` / `DecryptMessage()` — AES-256-GCM encryption
+  - WebSocket connection handling
+- Created `internal/handlers/dm.go` — DM handlers:
+  - `GET /api/dm/conversations` — List conversations
+  - `POST /api/dm/conversations` — Create conversation
+  - `GET /api/dm/conversations/:id/messages` — Get messages
+  - `POST /api/dm/conversations/:id/messages` — Send message
+  - `GET /ws/dm` — WebSocket endpoint
+- Created `internal/services/notification.go` — Notification service:
+  - `CreateNotification()` — Create notification
+  - `GetNotifications()` — List notifications (with unread filter)
+  - `MarkAsRead()` — Mark single notification as read
+  - `MarkAllAsRead()` — Mark all as read
+  - `GetUnreadCount()` — Get unread count
+  - `TriggerNotification()` — Trigger for engagement actions
+- Created `internal/handlers/notification.go` — Notification handlers:
+  - `GET /api/notifications` — List notifications
+  - `PUT /api/notifications/:id/read` — Mark as read
+  - `PUT /api/notifications/read-all` — Mark all as read
+  - `GET /api/notifications/unread-count` — Get unread count
+- Created `internal/services/media.go` — Media upload service:
+  - `UploadMedia()` — Upload to S3/MinIO
+  - `DeleteMedia()` — Delete from S3/MinIO
+  - S3-compatible storage support
+- Created `internal/handlers/media.go` — Media handler:
+  - `POST /api/media/upload` — Upload media file
+- Created `internal/services/event.go` — Event service:
+  - `OnPostCreated()` — Notify followers
+  - `OnLikeCreated()` — Notify post owner
+  - `OnCommentCreated()` — Notify post owner
+  - `OnFollowCreated()` — Notify followed user
+  - `OnDMReceived()` — Notify DM recipient
+- Updated `internal/config/config.go` — Added media config fields
+- Updated `cmd/api/main.go` — Wired up all new routes
+
+### CI Fixes Applied:
+- Fixed unused import errors
+- Fixed websocket API usage (websocket.New for Fiber)
+- Fixed media upload file handling
+- Added fetch-depth: 0 for gitleaks
+
+### Result:
+- **CI PASS** ✅ (run 31607240636, commit 442e264)
+  - backend: ✅ passed (52s)
+  - frontend: ✅ passed (21s)
+  - admin: ✅ passed (14s)
+  - security: ✅ passed (8s)
+
+### Phase 2.5 API Endpoints:
+```
+# DMs
+GET    /api/dm/conversations          — List conversations
+POST   /api/dm/conversations          — Create conversation
+GET    /api/dm/conversations/:id/messages — Get messages
+POST   /api/dm/conversations/:id/messages — Send message
+GET    /ws/dm                         — WebSocket endpoint
+
+# Notifications
+GET    /api/notifications             — List notifications
+PUT    /api/notifications/:id/read    — Mark as read
+PUT    /api/notifications/read-all    — Mark all as read
+GET    /api/notifications/unread-count — Get unread count
+
+# Media
+POST   /api/media/upload              — Upload media file
+```
+
+### Left incomplete / blocked:
+- No unit tests
+- Frontend not integrated
+- WebSocket broadcast to specific conversation participants not fully implemented
+- Notification triggering on engagement actions not wired up yet
+
+### Notes for next agent:
+- DM messages are encrypted with AES-256-GCM before storage
+- WebSocket uses gorilla/websocket upgrade pattern
+- Media upload supports S3/MinIO compatible storage
+- Notification types: follower, like, comment, repost, mention, dm_reply
+- Next step: Wire up notification triggers in post/follow handlers

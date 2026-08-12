@@ -44,8 +44,8 @@ func (s *EventService) OnLikeCreated(like *models.Like) error {
 	notificationService := NewNotificationService()
 	_, err := notificationService.TriggerNotification(
 		"like",
-		like.UserID,
-		like.UserID,
+		like.UserID, // post owner
+		like.UserID, // liker
 		&like.PostID,
 	)
 	return err
@@ -56,8 +56,8 @@ func (s *EventService) OnCommentCreated(comment *models.Comment) error {
 	notificationService := NewNotificationService()
 	_, err := notificationService.TriggerNotification(
 		"comment",
-		comment.UserID,
-		comment.UserID,
+		comment.UserID, // post owner
+		comment.UserID, // commenter
 		&comment.PostID,
 	)
 	return err

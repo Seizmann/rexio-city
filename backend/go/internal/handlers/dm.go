@@ -12,16 +12,26 @@ import (
 
 // DMHandler handles direct messaging
 type DMHandler struct {
-	dmService *services.DMService
-	wsClients map[string]*services.DMConnection
+	dmService          *services.DMService
+	readReceiptService *services.ReadReceiptService
+	typingIndicator    *services.TypingIndicatorService
+	wsClients          map[string]*services.DMConnection
+	mu                 sync.RWMutex
 }
 
 // NewDMHandler creates a new DM handler
 func NewDMHandler() *DMHandler {
-	return &DMHandler{
-		dmService: services.NewDMService(),
-		wsClients: make(map[string]*services.DMConnection),
+	handler := &DMHandler{
+		dmService:          services.NewDMService(),
+		readReceiptService: services.NewReadReceiptService(),
+		typingIndicator:    services.NewTypingIndicatorService(),
+		wsClients:          make(map[string]*services.DMConnection),
 	}
+
+	// Set up broadcast function for typing indicators
+	handler.typingIndicator.SetBroadcastFunc(handler.broadcastTypingIndicator)
+
+	return handler
 }
 
 // GetConversations handles GET /api/dm/conversations
@@ -83,9 +93,15 @@ func (h *DMHandler) GetMessages(c *fiber.Ctx) error {
 		})
 	}
 
+	// Get unread count
+	unreadCount, _ := h.readReceiptService.GetUnreadCount(convID, userID)
+
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": messages,
+		"meta": fiber.Map{
+			"unread_count": unreadCount,
+		},
 	})
 }
 
@@ -130,6 +146,9 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 	// Broadcast to other participants via WebSocket
 	h.broadcastToConversation(convID, message)
 
+	// Trigger notification for DM
+	_ = services.NewEventService().OnDMReceived(userID, convID, convID)
+
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": message,
@@ -139,38 +158,68 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 // ConnectWS handles WebSocket connection for real-time DMs
 func (h *DMHandler) ConnectWS(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
+	
+	// Upgrade connection to WebSocket
+	conn, err := websocket.Upgrade(c, nil, nil, 1024, 1024)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "WEBSOCKET_ERROR", "message": err.Error()},
+		})
+	}
 
-	// Use websocket.New for Fiber integration
-	return websocket.New(func(c *websocket.Conn) {
-		// Create connection
-		dmConn := &services.DMConnection{
-			ID:     fmt.Sprintf("ws_%d", userID),
-			UserID: userID,
-			Conn:   c,
-			Send:   make(chan []byte, 256),
-		}
+	// Create connection
+	dmConn := &services.DMConnection{
+		ID:     fmt.Sprintf("ws_%d", userID),
+		UserID: userID,
+		Conn:   conn,
+		Send:   make(chan []byte, 256),
+	}
 
-		h.wsClients[dmConn.ID] = dmConn
+	h.mu.Lock()
+	h.wsClients[dmConn.ID] = dmConn
+	h.mu.Unlock()
 
-		// Handle incoming messages
+	// Send welcome message
+	conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"connected","user_id":`+fmt.Sprintf("%d", userID)+`}`))
+
+	// Handle incoming messages
+	go func() {
 		for {
-			_, message, err := c.ReadMessage()
+			_, message, err := conn.ReadMessage()
 			if err != nil {
+				h.mu.Lock()
 				delete(h.wsClients, dmConn.ID)
-				c.Close()
+				h.mu.Unlock()
+				conn.Close()
 				break
 			}
 			// Process message
 			h.handleWSMessage(dmConn, message)
 		}
-	}, websocket.Config{})(c)
+	}()
+
+	// Handle outgoing messages
+	go func() {
+		for message := range dmConn.Send {
+			if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				h.mu.Lock()
+				delete(h.wsClients, dmConn.ID)
+				h.mu.Unlock()
+				conn.Close()
+				break
+			}
+		}
+	}()
+
+	return nil
 }
 
 // handleWSMessage handles incoming WebSocket messages
 func (h *DMHandler) handleWSMessage(conn *services.DMConnection, message []byte) {
 	// Parse message
 	type wsMessage struct {
-		Type string `json:"type"`
+		Type string                 `json:"type"`
 		Data map[string]interface{} `json:"data"`
 	}
 	var msg wsMessage
@@ -182,6 +231,23 @@ func (h *DMHandler) handleWSMessage(conn *services.DMConnection, message []byte)
 	switch msg.Type {
 	case "ping":
 		conn.Send <- []byte(`{"type":"pong"}`)
+	case "typing_start":
+		// User started typing
+		if convID, ok := msg.Data["conversation_id"].(float64); ok {
+			h.typingIndicator.StartTyping(uint(convID), conn.UserID)
+		}
+	case "typing_stop":
+		// User stopped typing
+		if convID, ok := msg.Data["conversation_id"].(float64); ok {
+			h.typingIndicator.StopTyping(uint(convID), conn.UserID)
+		}
+	case "read_receipt":
+		// Message read
+		if convID, ok := msg.Data["conversation_id"].(float64); ok {
+			if msgID, ok := msg.Data["message_id"].(float64); ok {
+				h.readReceiptService.MarkMessageRead(uint(convID), uint(msgID), conn.UserID)
+			}
+		}
 	case "chat_message":
 		// Handle incoming chat message
 		if convID, ok := msg.Data["conversation_id"].(float64); ok {
@@ -197,10 +263,34 @@ func (h *DMHandler) broadcastToConversation(conversationID uint, message *servic
 	// For now, broadcast to all connected clients
 	for _, client := range h.wsClients {
 		msg := fmt.Sprintf(`{"type":"new_message","conversation_id":%d}`, conversationID)
+		if message != nil {
+			msg = fmt.Sprintf(`{"type":"new_message","conversation_id":%d,"message":%s}`, 
+				conversationID, messageJSON(message))
+		}
 		select {
 		case client.Send <- []byte(msg):
 		default:
 			// Client buffer full, skip
+		}
+	}
+}
+
+// broadcastTypingIndicator broadcasts typing indicators
+func (h *DMHandler) broadcastTypingIndicator(conversationID uint, userID uint, isTyping bool) {
+	msgType := "typing_stop"
+	if isTyping {
+		msgType = "typing_start"
+	}
+	
+	for _, client := range h.wsClients {
+		if client.UserID != userID {
+			payload := fmt.Sprintf(`{"type":"%s","user_id":%d,"conversation_id":%d}`,
+				msgType, userID, conversationID)
+			select {
+			case client.Send <- []byte(payload):
+			default:
+				// Client buffer full, skip
+			}
 		}
 	}
 }
@@ -235,4 +325,85 @@ func (h *DMHandler) CreateConversation(c *fiber.Ctx) error {
 		"success": true,
 		"data": conversation,
 	})
+}
+
+// GetUnreadCount handles GET /api/dm/conversations/:id/unread-count
+func (h *DMHandler) GetUnreadCount(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	conversationID := c.Params("id")
+
+	var convID uint
+	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+		})
+	}
+
+	count, err := h.readReceiptService.GetUnreadCount(convID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data": fiber.Map{"unread_count": count},
+	})
+}
+
+// MarkConversationRead handles PUT /api/dm/conversations/:id/read
+func (h *DMHandler) MarkConversationRead(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	conversationID := c.Params("id")
+
+	var convID uint
+	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+		})
+	}
+
+	err := h.readReceiptService.MarkConversationRead(convID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data": fiber.Map{"message": "Conversation marked as read"},
+	})
+}
+
+// GetTypingUsers handles GET /api/dm/conversations/:id/typing
+func (h *DMHandler) GetTypingUsers(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	conversationID := c.Params("id")
+
+	var convID uint
+	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+		})
+	}
+
+	typingUsers := h.typingIndicator.GetTypingStatus(convID, userID)
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data": typingUsers,
+	})
+}
+
+// messageJSON converts a DMMessage to JSON
+func messageJSON(msg *services.DMMessage) string {
+	data, _ := json.Marshal(msg)
+	return string(data)
 }
