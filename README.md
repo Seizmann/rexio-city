@@ -33,7 +33,6 @@ rexio-city/
 ├── Docs/                  # Brand assets
 ├── AGENTS.md              # AI agent instructions
 ├── DESIGN.md              # Visual design system
-├── rexio-city-v1.md       # Product requirements
 └── WORKLOGS.md            # Session logs
 ```
 
