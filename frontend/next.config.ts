@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Force webpack instead of Turbopack for Vercel compatibility
+  turbopack: {},
   images: {
     remotePatterns: [
       {
