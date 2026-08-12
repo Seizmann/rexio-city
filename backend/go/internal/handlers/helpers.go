@@ -7,14 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// HealthHandler returns server health status
-func HealthHandler(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{
-		"success": true,
-		"data":    fiber.Map{"status": "healthy"},
-	})
-}
-
 // ParseUint parses a string parameter to uint
 func ParseUint(c *fiber.Ctx, param string) (uint, error) {
 	var val uint
@@ -29,4 +21,14 @@ func ParseUintQuery(c *fiber.Ctx, param string, defaultVal int) (int, error) {
 		return defaultVal, nil
 	}
 	return val, nil
+}
+
+// ParseUintPostID parses post ID from URL parameter
+func ParseUintPostID(c *fiber.Ctx) (uint, error) {
+	return ParseUint(c, "id")
+}
+
+// ParseUintUserID parses user ID from URL parameter
+func ParseUintUserID(c *fiber.Ctx) (uint, error) {
+	return ParseUint(c, "id")
 }
