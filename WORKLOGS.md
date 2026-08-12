@@ -673,13 +673,23 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
 ### Done:
 - **Local Backend Rebuild**:
   - Rebuilt native Go binaries: `bin/api` and `bin/admin` in `backend/go/` (passed cleanly).
-  - Started Docker container rebuild: `docker compose -f docker/docker-compose.dev.yml up -d --build backend`.
+  - Completed Docker container rebuild: `docker compose -f docker/docker-compose.dev.yml up -d --build backend` (`docker-backend-1` started on port 10888).
+- **Proxy & Auth Fixes**:
+  - Updated Next.js middleware proxy to forward `X-CSRF-Token` and `Cookie` headers to Go backend, and pass through `Set-Cookie` responses.
+- **UI Enhancements**:
+  - Replaced plain preloader spinner with Twitter/X-style animated splash screen featuring the Rexio City icon with spring pop-in scale animation.
+- **Upload Flow Overhaul & Bug Fixes**:
+  - Added dedicated Node.js Route Handler `frontend/src/app/api/media/upload/route.ts` so file uploads are not choked by Next.js Edge middleware stream limits.
+  - Switched PostComposer to upload-on-submit pattern with local blob previews.
+  - Implemented Facebook/Instagram-style live upload status overlay (Uploading → Updating → Finishing) with pulsing status dot and shimmer overlay on pending cards.
+  - Fixed blank own post issue in feed by attaching resolved user objects to optimistic pending posts.
 
 ### Left incomplete / blocked:
-- None. Native binaries built, Docker build initiated.
+- None.
 
 ### Notes for next agent:
-- Native binaries `bin/api` and `bin/admin` are freshly compiled in `backend/go/bin/`.
-- Docker service `docker-backend-1` is being rebuilt via docker compose.
+- Media uploads go through dedicated Node.js Route Handler at `frontend/src/app/api/media/upload/route.ts`.
+- All `tsc --noEmit` and `eslint` checks pass cleanly with 0 warnings.
+
 
 
