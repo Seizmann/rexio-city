@@ -171,3 +171,87 @@
 - CI is now fully green
 - All jobs pass on push to dev branch
 - Next step: Implement auth endpoints (signup, login, social OAuth)
+
+## [2026-08-12 17:20, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested: "ok Auth system er kaj suru koro"
+- Roadmap Phase 1: Implement auth system
+
+### Plan for this session:
+- Implement auth service with signup, login, refresh token
+- Add PostgreSQL connection with GORM
+- Implement argon2id password hashing
+- Add auth handlers for /api/auth routes
+- Update database schema with password_hash and refresh_tokens tables
+- Fix all compilation and CI errors
+
+### Done:
+- Created `internal/db/db.go` — Database connection using GORM + PostgreSQL
+- Created `internal/services/auth.go` — Auth service with:
+  - `HashPassword()` — argon2id hashing
+  - `VerifyPassword()` — password verification
+  - `Signup()` — user registration with validation
+  - `Login()` — user authentication
+  - `RefreshToken()` — token refresh
+- Created `internal/handlers/auth.go` — HTTP handlers for:
+  - `POST /api/auth/signup` — User registration
+  - `POST /api/auth/login` — User login
+  - `POST /api/auth/refresh` — Token refresh
+- Updated `internal/middleware/auth.go` — Added `ParseRefreshToken()` function
+- Updated `internal/models/models.go` — Added `PasswordHash` and `RefreshToken` model
+- Updated `migrations/001_initial_schema.sql` — Added refresh_tokens table
+- Updated `internal/config/config.go` — Added time.Duration parsing
+- Updated `cmd/api/main.go` — Wired up auth routes
+
+### CI Fixes Applied:
+- Fixed missing `errors` import in auth middleware
+- Fixed undefined `hashedPassword` (added to user creation)
+- Fixed Email type mismatch (*string vs string)
+- Fixed loadConfig() to use proper config struct
+- Fixed RefreshToken field in SignupOutput
+- Fixed ParseRefreshToken to return *jwt.MapClaims
+- Removed unused imports from handlers
+- Ran `go mod tidy` to generate go.sum
+
+### Result:
+- **CI PASS** ✅ (run 31601046251, commit 3208828)
+  - backend: ✅ passed (44s)
+  - frontend: ✅ passed (24s)
+  - admin: ✅ passed (13s)
+  - security: ✅ passed (6s)
+
+### Auth API Endpoints:
+```
+POST /api/auth/signup    — {username, email, password, display_name}
+POST /api/auth/login     — {email, password}
+POST /api/auth/refresh   — {refresh_token}
+GET  /api/auth/health    — Health check (no auth)
+```
+
+### Response Format:
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": 1, "username": "..." },
+    "access_token": "eyJ...",
+    "refresh_token": "eyJ...",
+    "expires_in": 900
+  }
+}
+```
+
+### Left incomplete / blocked:
+- Social OAuth (Google, GitHub) not implemented yet
+- Refresh token storage in database not implemented (tokens returned but not persisted)
+- Email verification not implemented
+- No unit tests for auth service
+- Frontend not integrated with auth endpoints
+
+### Notes for next agent:
+- Auth system is functional with email/password
+- Passwords are hashed with argon2id (3 iterations, 64MB memory, 1 parallelism)
+- JWT access tokens expire in 15 minutes
+- Refresh tokens expire in 30 days
+- Config loaded from environment variables (DATABASE_URL, JWT_SECRET, etc.)
+- Next step: Implement social OAuth (Google/GitHub) or move to Phase 2 (Posts/Feed)

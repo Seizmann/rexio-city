@@ -45,13 +45,41 @@ func main() {
 	// Protected routes (auth required)
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
-	protected.Get("/user/me", func(c *fiber.Ctx) error {
-		userID := c.Locals("user_id").(uint)
-		return c.JSON(fiber.Map{
-			"success": true,
-			"data":    fiber.Map{"user_id": userID},
-		})
-	})
+
+	// User routes
+	userHandler := handlers.NewUserHandler()
+	protected.Get("/users/me", userHandler.GetCurrentUser)
+	protected.Patch("/users/me", userHandler.UpdateUser)
+	protected.Get("/users/:username", userHandler.GetUser)
+	protected.Get("/search", userHandler.SearchUsers)
+
+	// Post routes
+	postHandler := handlers.NewPostHandler()
+	protected.Post("/posts", postHandler.CreatePost)
+	protected.Get("/posts", postHandler.ListPosts)
+	protected.Get("/posts/:id", postHandler.GetPost)
+	protected.Delete("/posts/:id", postHandler.DeletePost)
+	protected.Post("/posts/:id/like", postHandler.LikePost)
+	protected.Delete("/posts/:id/like", postHandler.UnlikePost)
+	protected.Post("/posts/:id/comments", postHandler.CommentOnPost)
+	protected.Get("/posts/:id/comments", postHandler.GetPostComments)
+	protected.Post("/posts/:id/repost", postHandler.RepostPost)
+	protected.Delete("/posts/:id/repost", postHandler.UnrepostPost)
+	protected.Post("/posts/:id/bookmark", postHandler.BookmarkPost)
+	protected.Delete("/posts/:id/bookmark", postHandler.UnbookmarkPost)
+
+	// Feed routes
+	feedHandler := handlers.NewFeedHandler()
+	protected.Get("/feed", feedHandler.ListFeed)
+
+	// Follow routes
+	followHandler := handlers.NewFollowHandler()
+	protected.Post("/users/:id/follow", followHandler.FollowUser)
+	protected.Delete("/users/:id/follow", followHandler.UnfollowUser)
+	protected.Get("/users/:id/followers", followHandler.GetFollowers)
+	protected.Get("/users/:id/following", followHandler.GetFollowing)
+	protected.Get("/users/:id/follow-counts", followHandler.GetFollowCounts)
+	protected.Get("/users/:id/is-following", followHandler.IsFollowing)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

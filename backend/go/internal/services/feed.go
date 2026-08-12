@@ -1,0 +1,124 @@
+package services
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/seizmann/rexio-city/backend/go/internal/db"
+	"github.com/seizmann/rexio-city/backend/go/internal/models"
+)
+
+// FeedService handles feed-related operations
+type FeedService struct{}
+
+// NewFeedService creates a new feed service
+func NewFeedService() *FeedService {
+	return &FeedService{}
+}
+
+// FeedPost contains post data with engagement info
+type FeedPost struct {
+	ID        uint      `json:"id"`
+	UserID    uint      `json:"user_id"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	User      models.User `json:"user"`
+	Likes     int       `json:"likes"`
+	Comments  int       `json:"comments"`
+	Reposts   int       `json:"reposts"`
+	IsLiked   bool      `json:"is_liked"`
+	IsReposted bool     `json:"is_reposted"`
+}
+
+// ListFeedInput contains feed request parameters
+type ListFeedInput struct {
+	UserID uint
+	Tab    string // "following" or "foryou"
+	Page   int
+	PerPage int
+}
+
+// ListFeedOutput contains feed posts with pagination
+type ListFeedOutput struct {
+	Posts []FeedPost `json:"posts"`
+	Page  int        `json:"page"`
+	PerPage int      `json:"per_page"`
+	Total int        `json:"total"`
+}
+
+// ListFeed retrieves posts for the feed
+func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
+	if input.Page < 1 {
+		input.Page = 1
+	}
+	if input.PerPage < 1 || input.PerPage > 50 {
+		input.PerPage = 20
+	}
+	if input.Tab != "following" && input.Tab != "foryou" {
+		input.Tab = "foryou"
+	}
+
+	var posts []models.Post
+	var total int64
+	var query = db.GetDB().Model(&models.Post{}).Where("deleted_at IS NULL")
+
+	// Following tab: only show posts from followed users
+	if input.Tab == "following" && input.UserID > 0 {
+		query = query.Joins("INNER JOIN follows ON posts.user_id = follows.followee_id").
+			Where("follows.follower_id = ?", input.UserID)
+	}
+
+	query.Count(&total)
+
+	offset := (input.Page - 1) * input.PerPage
+	query.Preload("User").
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(input.PerPage).
+		Find(&posts)
+
+	// Build feed posts with engagement info
+	feedPosts := make([]FeedPost, 0, len(posts))
+	for _, post := range posts {
+		feedPost := FeedPost{
+			ID:        post.ID,
+			UserID:    post.UserID,
+			Content:   post.Content,
+			CreatedAt: post.CreatedAt,
+			User:      post.User,
+		}
+
+		// Get engagement counts
+		var likeCount int64
+		db.GetDB().Model(&models.Like{}).Where("post_id = ?", post.ID).Count(&likeCount)
+		feedPost.Likes = int(likeCount)
+
+		var commentCount int64
+		db.GetDB().Model(&models.Comment{}).Where("post_id = ?", post.ID).Count(&commentCount)
+		feedPost.Comments = int(commentCount)
+
+		var repostCount int64
+		db.GetDB().Model(&models.Repost{}).Where("post_id = ?", post.ID).Count(&repostCount)
+		feedPost.Reposts = int(repostCount)
+
+		// Check engagement status
+		if input.UserID > 0 {
+			var like models.Like
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
+			feedPost.IsLiked = like.ID > 0
+
+			var repost models.Repost
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
+			feedPost.IsReposted = repost.ID > 0
+		}
+
+		feedPosts = append(feedPosts, feedPost)
+	}
+
+	return &ListFeedOutput{
+		Posts: feedPosts,
+		Page: input.Page,
+		PerPage: input.PerPage,
+		Total: int(total),
+	}, nil
+}
