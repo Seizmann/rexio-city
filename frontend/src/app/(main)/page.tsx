@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import LandingAuth from '@/components/auth/LandingAuth';
 import FeedTabs from '@/components/feed/FeedTabs';
 import PostComposer from '@/components/feed/PostComposer';
 import PostCard from '@/components/feed/PostCard';
@@ -11,15 +13,17 @@ import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
 
 export default function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('following');
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  // Fetch feed posts when activeTab changes
+  // Fetch feed posts when activeTab changes (only if authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     let isSubscribed = true;
 
     api
@@ -31,18 +35,28 @@ export default function HomePage() {
           setHasMore(res.data.length > 0);
         }
         setPage(1);
-        setLoading(false);
+        setFeedLoading(false);
       })
       .catch((err: unknown) => {
         if (!isSubscribed) return;
         console.error('Failed to fetch feed:', err);
-        setLoading(false);
+        setFeedLoading(false);
       });
 
     return () => {
       isSubscribed = false;
     };
-  }, [activeTab]);
+  }, [activeTab, isAuthenticated]);
+
+  // Show nothing while checking initial auth status
+  if (isLoading) {
+    return null;
+  }
+
+  // If not logged in, render the Landing Auth screen directly on /
+  if (!isAuthenticated) {
+    return <LandingAuth />;
+  }
 
   function handleLoadMore() {
     const nextPage = page + 1;
@@ -79,7 +93,7 @@ export default function HomePage() {
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
       <PostComposer onPostCreated={handlePostCreated} />
 
-      {loading ? (
+      {feedLoading ? (
         <>
           <PostCardSkeleton />
           <PostCardSkeleton />

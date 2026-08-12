@@ -1,12 +1,14 @@
 'use client';
 
 /**
- * Main app shell layout — wraps all authenticated pages.
- * Provides TopBar, Sidebar (desktop), BottomNav (mobile), and
- * an auth guard that redirects to /login if not authenticated.
+ * Main app shell layout — wraps pages in the (main) group.
+ *
+ * For authenticated users: renders TopBar, Sidebar, content area, and BottomNav.
+ * For unauthenticated users on home page (/): renders the page directly (LandingAuth screen).
+ * For unauthenticated users on other routes: redirects to /login.
  */
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { ROUTES } from '@/lib/constants';
@@ -22,15 +24,18 @@ export default function MainLayout({
 }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Auth guard: redirect to login if not authenticated (after loading completes)
+  const isHomePage = pathname === '/';
+
+  // Auth guard: redirect to login if not authenticated and trying to access protected routes
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && !isHomePage) {
       router.replace(ROUTES.LOGIN);
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, isHomePage, router]);
 
-  // Show a loading spinner while auth state hydrates
+  // Show loading spinner while auth hydrates
   if (isLoading) {
     return (
       <div className={styles.loadingScreen}>
@@ -39,19 +44,23 @@ export default function MainLayout({
     );
   }
 
-  // Don't render the shell if not authenticated (redirect is in progress)
-  if (!isAuthenticated || !user) {
+  // If not authenticated and on home page (/), render page content directly (LandingAuth screen)
+  if (!isAuthenticated) {
+    if (isHomePage) {
+      return <>{children}</>;
+    }
     return null;
   }
 
+  // Authenticated user: render full App Shell
   return (
     <div className={styles.shell}>
       <TopBar />
       <div className={styles.body}>
-        <Sidebar username={user.username} />
+        <Sidebar username={user?.username || ''} />
         <main className={styles.content}>{children}</main>
       </div>
-      <BottomNav username={user.username} />
+      <BottomNav username={user?.username || ''} />
     </div>
   );
 }
