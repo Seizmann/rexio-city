@@ -22,7 +22,12 @@ func NewUserHandler() *UserHandler {
 // GetUser handles GET /api/users/:username
 func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	username := c.Params("username")
-	currentUserID := c.Locals("user_id").(uint)
+	var currentUserID uint
+	if val := c.Locals("user_id"); val != nil {
+		if id, ok := val.(uint); ok {
+			currentUserID = id
+		}
+	}
 
 	result, err := h.userService.GetUserByUsername(username, currentUserID)
 	if err != nil {
@@ -40,7 +45,18 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 
 // GetCurrentUser handles GET /api/users/me
 func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uint)
+	var userID uint
+	if val := c.Locals("user_id"); val != nil {
+		if id, ok := val.(uint); ok {
+			userID = id
+		}
+	}
+	if userID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "UNAUTHORIZED", "message": "Unauthorized"},
+		})
+	}
 
 	result, err := h.userService.GetUserByID(userID)
 	if err != nil {
@@ -58,7 +74,18 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 
 // UpdateUser handles PATCH /api/users/me
 func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uint)
+	var userID uint
+	if val := c.Locals("user_id"); val != nil {
+		if id, ok := val.(uint); ok {
+			userID = id
+		}
+	}
+	if userID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "UNAUTHORIZED", "message": "Unauthorized"},
+		})
+	}
 
 	var input services.UpdateUserInput
 	if err := c.BodyParser(&input); err != nil {

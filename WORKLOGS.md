@@ -551,7 +551,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
-  - **Backend 408 Timeout Fix**: Fixed `ReadTimeout` and `WriteTimeout` in `backend/go/cmd/api/main.go` which were set to `10 * 1000` (10 microseconds) instead of `10 * time.Second`, causing Fiber to immediately drop all HTTP requests with 408 Request Timeout.
+  - **Backend 408 Timeout & Handler Fix**: Fixed `ReadTimeout` and `WriteTimeout` in `backend/go/cmd/api/main.go` and added safe `c.Locals("user_id")` extraction in `backend/go/internal/handlers/user.go` to prevent type assertion panics.
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:
