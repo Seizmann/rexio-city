@@ -24,9 +24,11 @@ func (s *FollowService) FollowUser(followerID, followeeID uint) error {
 	}
 
 	// Check if already following
-	var existing models.Follow
-	db.GetDB().Where("follower_id = ? AND followee_id = ?", followerID, followeeID).First(&existing)
-	if existing.ID > 0 {
+	var count int64
+	db.GetDB().Model(&models.Follow{}).
+		Where("follower_id = ? AND followee_id = ?", followerID, followeeID).
+		Count(&count)
+	if count > 0 {
 		return fmt.Errorf("already following")
 	}
 
@@ -117,7 +119,9 @@ func (s *FollowService) GetFollowing(userID uint, page, perPage int) ([]models.U
 
 // GetUserFollowCounts returns follower and following counts for a user
 func (s *FollowService) GetUserFollowCounts(userID uint) (followers, following int, err error) {
-	db.GetDB().Model(&models.Follow{}).Where("followee_id = ?", userID).Count(&followers)
-	db.GetDB().Model(&models.Follow{}).Where("follower_id = ?", userID).Count(&following)
-	return followers, following, nil
+	var followCount int64
+	var followingCount int64
+	db.GetDB().Model(&models.Follow{}).Where("followee_id = ?", userID).Count(&followCount)
+	db.GetDB().Model(&models.Follow{}).Where("follower_id = ?", userID).Count(&followingCount)
+	return int(followCount), int(followingCount), nil
 }

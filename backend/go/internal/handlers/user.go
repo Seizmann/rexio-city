@@ -92,8 +92,8 @@ func (h *UserHandler) SearchUsers(c *fiber.Ctx) error {
 		})
 	}
 
-	page, _ := strconv SSanf(c.Query("page", "1"))
-	perPage, _ := strconv SSanf(c.Query("per_page", "20"))
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
 
 	result, err := h.userService.SearchUsers(query, page, perPage)
 	if err != nil {

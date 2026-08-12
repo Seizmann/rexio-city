@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/seizmann/rexio-city/backend/go/internal/services"
 )
@@ -23,7 +26,7 @@ func (h *FollowHandler) FollowUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 
 	var followeeID uint
-	if _, err := strconv SSanf(userID, "%d", &followeeID); err != nil {
+	if _, err := fmt.Sscanf(userID, "%d", &followeeID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
@@ -56,7 +59,7 @@ func (h *FollowHandler) UnfollowUser(c *fiber.Ctx) error {
 	userID := c.Params("id")
 
 	var followeeID uint
-	if _, err := strconv SSanf(userID, "%d", &followeeID); err != nil {
+	if _, err := fmt.Sscanf(userID, "%d", &followeeID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
@@ -82,15 +85,15 @@ func (h *FollowHandler) GetFollowers(c *fiber.Ctx) error {
 	userID := c.Params("id")
 
 	var targetUserID uint
-	if _, err := strconv SSanf(userID, "%d", &targetUserID); err != nil {
+	if _, err := fmt.Sscanf(userID, "%d", &targetUserID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
-	page, _ := strconv SSanf(c.Query("page", "1"))
-	perPage, _ := strconv SSanf(c.Query("per_page", "20"))
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
 
 	users, total, err := h.followService.GetFollowers(targetUserID, page, perPage)
 	if err != nil {
@@ -116,15 +119,15 @@ func (h *FollowHandler) GetFollowing(c *fiber.Ctx) error {
 	userID := c.Params("id")
 
 	var targetUserID uint
-	if _, err := strconv SSanf(userID, "%d", &targetUserID); err != nil {
+	if _, err := fmt.Sscanf(userID, "%d", &targetUserID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
-	page, _ := strconv SSanf(c.Query("page", "1"))
-	perPage, _ := strconv SSanf(c.Query("per_page", "20"))
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
 
 	users, total, err := h.followService.GetFollowing(targetUserID, page, perPage)
 	if err != nil {
@@ -150,7 +153,7 @@ func (h *FollowHandler) GetFollowCounts(c *fiber.Ctx) error {
 	userID := c.Params("id")
 
 	var targetUserID uint
-	if _, err := strconv SSanf(userID, "%d", &targetUserID); err != nil {
+	if _, err := fmt.Sscanf(userID, "%d", &targetUserID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
@@ -180,7 +183,7 @@ func (h *FollowHandler) IsFollowing(c *fiber.Ctx) error {
 	userID := c.Params("id")
 
 	var followeeID uint
-	if _, err := strconv SSanf(userID, "%d", &followeeID); err != nil {
+	if _, err := fmt.Sscanf(userID, "%d", &followeeID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},

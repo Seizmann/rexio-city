@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/seizmann/rexio-city/backend/go/internal/services"
 )
@@ -19,15 +22,15 @@ func NewPostHandler() *PostHandler {
 
 // CreatePostRequest represents a create post request
 type CreatePostRequest struct {
-	Content string   `json:"content"`
-	MediaURLs []string `json:"media_urls"`
+	Content    string   `json:"content"`
+	MediaURLs  []string `json:"media_urls"`
 	MediaTypes []string `json:"media_types"`
 }
 
 // CommentRequest represents a comment request
 type CommentRequest struct {
-	Content string `json:"content"`
-	ParentID *uint `json:"parent_id"`
+	Content  string `json:"content"`
+	ParentID *uint  `json:"parent_id"`
 }
 
 // RepostRequest represents a repost request
@@ -38,7 +41,7 @@ type RepostRequest struct {
 // CreatePost handles POST /api/posts
 func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
-	
+
 	var input CreatePostRequest
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -114,7 +117,7 @@ func (h *PostHandler) ListPosts(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data": result.Posts,
 		"meta": fiber.Map{
 			"page": page,
 			"per_page": perPage,
@@ -200,7 +203,7 @@ func (h *PostHandler) UnlikePost(c *fiber.Ctx) error {
 		})
 	}
 
-	err := h.postService.UnilikePost(input, userID)
+	err := h.postService.UnlikePost(input, userID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,

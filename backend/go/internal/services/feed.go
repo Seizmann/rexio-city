@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
@@ -18,32 +17,32 @@ func NewFeedService() *FeedService {
 
 // FeedPost contains post data with engagement info
 type FeedPost struct {
-	ID        uint      `json:"id"`
-	UserID    uint      `json:"user_id"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	User      models.User `json:"user"`
-	Likes     int       `json:"likes"`
-	Comments  int       `json:"comments"`
-	Reposts   int       `json:"reposts"`
-	IsLiked   bool      `json:"is_liked"`
-	IsReposted bool     `json:"is_reposted"`
+	ID         uint          `json:"id"`
+	UserID     uint          `json:"user_id"`
+	Content    string        `json:"content"`
+	CreatedAt  time.Time     `json:"created_at"`
+	User       models.User   `json:"user"`
+	Likes      int           `json:"likes"`
+	Comments   int           `json:"comments"`
+	Reposts    int           `json:"reposts"`
+	IsLiked    bool          `json:"is_liked"`
+	IsReposted bool          `json:"is_reposted"`
 }
 
 // ListFeedInput contains feed request parameters
 type ListFeedInput struct {
-	UserID uint
-	Tab    string // "following" or "foryou"
-	Page   int
+	UserID  uint
+	Tab     string // "following" or "foryou"
+	Page    int
 	PerPage int
 }
 
 // ListFeedOutput contains feed posts with pagination
 type ListFeedOutput struct {
-	Posts []FeedPost `json:"posts"`
-	Page  int        `json:"page"`
-	PerPage int      `json:"per_page"`
-	Total int        `json:"total"`
+	Posts   []FeedPost `json:"posts"`
+	Page    int        `json:"page"`
+	PerPage int        `json:"per_page"`
+	Total   int        `json:"total"`
 }
 
 // ListFeed retrieves posts for the feed
@@ -60,7 +59,7 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 
 	var posts []models.Post
 	var total int64
-	var query = db.GetDB().Model(&models.Post{}).Where("deleted_at IS NULL")
+	query := db.GetDB().Model(&models.Post{}).Where("deleted_at IS NULL")
 
 	// Following tab: only show posts from followed users
 	if input.Tab == "following" && input.UserID > 0 {
