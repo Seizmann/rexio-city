@@ -1,4 +1,4 @@
-## [2026-08-12 15:34, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+## [2026-08-12 15:50, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
 ### Picking up:
 - Repo: empty GitHub repo cloned from git@github.com:Seizmann/rexio-city.git
 ### Plan for this session:
@@ -17,8 +17,9 @@
   - `.gitignore` (Python, Node, env files, secrets protected)
   - `WORKLOGS.md` (session log)
 - Initialized git, created `dev` branch
-- Committed 6 files
-- Pushed to origin/dev
+- Committed 6 files in single clean commit
+- Cleaned git history (removed intermediate commits)
+- Pushed to origin/dev with force
 
 ### Left incomplete / blocked:
 - No code scaffold yet (frontend/, admin/, backend/ directories empty)
