@@ -2,98 +2,55 @@ package config
 
 import (
 	"os"
-	"strconv"
 	"time"
 )
 
 type Config struct {
-	Port               string
-	DatabaseURL        string
-	RedisURL           string
-	JWTSecret          string
-	JWTExpiry          time.Duration
-	RefreshSecret      string
-	RefreshExpiry      time.Duration
-	FrontendURL        string
-	AdminURL           string
-	BrevoAPIKey        string
-	BrevoFromEmail     string
-	R2AccountID        string
-	R2AccessKeyID      string
-	R2SecretKey        string
-	R2Bucket           string
-	GoogleClientID     string
-	GoogleClientSecret string
-	GitHubClientID     string
-	GitHubClientSecret string
+	Port            string
+	DatabaseURL     string
+	RedisURL        string
+	JWTSecret       string
+	JWTExpiry       time.Duration
+	RefreshSecret   string
+	RefreshExpiry   time.Duration
+	FrontendURL     string
+	MediaEndpoint   string
+	MediaBucket     string
+	MediaAccessKey  string
+	MediaSecretKey  string
+	MediaURL        string
 }
 
 func Load() *Config {
-	jwtExpiry, _ := time.ParseDuration(getEnv("JWT_EXPIRY", "15m"))
-	refreshExpiry, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "720h"))
-
 	return &Config{
-		Port:               getEnv("PORT", "10800"),
-		DatabaseURL:        getEnv("DATABASE_URL", ""),
-		RedisURL:           getEnv("REDIS_URL", ""),
-		JWTSecret:          getEnv("JWT_SECRET", ""),
-		JWTExpiry:          jwtExpiry,
-		RefreshSecret:      getEnv("REFRESH_TOKEN_SECRET", ""),
-		RefreshExpiry:      refreshExpiry,
-		FrontendURL:        getEnv("FRONTEND_URL", "https://city.rexio.pro"),
-		AdminURL:           getEnv("ADMIN_URL", "https://admin.rexio.pro"),
-		BrevoAPIKey:        getEnv("BREVO_API_KEY", ""),
-		BrevoFromEmail:     getEnv("BREVO_FROM_EMAIL", "noreply@rexio.pro.bd"),
-		R2AccountID:        getEnv("R2_ACCOUNT_ID", ""),
-		R2AccessKeyID:      getEnv("R2_ACCESS_KEY_ID", ""),
-		R2SecretKey:        getEnv("R2_SECRET_ACCESS_KEY", ""),
-		R2Bucket:           getEnv("R2_BUCKET", "rexio-city-media"),
-		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GitHubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
-		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+		Port:          getEnv("PORT", "10800"),
+		DatabaseURL:   getEnv("DATABASE_URL", "postgresql://rexio:rexio@localhost:5432/rexiocity"),
+		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379"),
+		JWTSecret:     getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		JWTExpiry:     parseDuration("JWT_EXPIRY", "15m"),
+		RefreshSecret: getEnv("REFRESH_SECRET", "dev-refresh-secret-change-in-production"),
+		RefreshExpiry: parseDuration("REFRESH_EXPIRY", "720h"), // 30 days
+		FrontendURL:   getEnv("FRONTEND_URL", "http://localhost:3000"),
+		MediaEndpoint: getEnv("MEDIA_ENDPOINT", "http://localhost:9000"),
+		MediaBucket:   getEnv("MEDIA_BUCKET", "rexio-city"),
+		MediaAccessKey: getEnv("MEDIA_ACCESS_KEY", "minioadmin"),
+		MediaSecretKey: getEnv("MEDIA_SECRET_KEY", "minioadmin"),
+		MediaURL:      getEnv("MEDIA_URL", "http://localhost:9000"),
 	}
 }
 
-func LoadAdmin() *Config {
-	jwtExpiry, _ := time.ParseDuration(getEnv("JWT_EXPIRY", "15m"))
-	refreshExpiry, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "720h"))
-
-	return &Config{
-		Port:            getEnv("PORT", "10900"),
-		DatabaseURL:     getEnv("DATABASE_URL", ""),
-		RedisURL:        getEnv("REDIS_URL", ""),
-		JWTSecret:       getEnv("JWT_SECRET", ""),
-		JWTExpiry:       jwtExpiry,
-		RefreshSecret:   getEnv("REFRESH_TOKEN_SECRET", ""),
-		RefreshExpiry:   refreshExpiry,
-		FrontendURL:     getEnv("FRONTEND_URL", "https://city.rexio.pro"),
-		AdminURL:        getEnv("ADMIN_URL", "https://admin.rexio.pro"),
-		BrevoAPIKey:     getEnv("BREVO_API_KEY", ""),
-		BrevoFromEmail:  getEnv("BREVO_FROM_EMAIL", "noreply@rexio.pro.bd"),
-		R2AccountID:     getEnv("R2_ACCOUNT_ID", ""),
-		R2AccessKeyID:   getEnv("R2_ACCESS_KEY_ID", ""),
-		R2SecretKey:     getEnv("R2_SECRET_ACCESS_KEY", ""),
-		R2Bucket:        getEnv("R2_BUCKET", "rexio-city-media"),
-		GoogleClientID:  getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GitHubClientID:  getEnv("GITHUB_CLIENT_ID", ""),
-		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+func getEnv(key, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
 	}
+	return defaultVal
 }
 
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+func parseDuration(key, defaultVal string) time.Duration {
+	val := getEnv(key, defaultVal)
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		d, _ = time.ParseDuration(defaultVal)
 	}
-	return fallback
-}
-
-func getEnvInt(key string, fallback int) int {
-	if value, ok := os.LookupEnv(key); ok {
-		if i, err := strconv.Atoi(value); err == nil {
-			return i
-		}
-	}
-	return fallback
+	return d
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/websocket/v2"
 	"github.com/seizmann/rexio-city/backend/go/internal/config"
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
 	"github.com/seizmann/rexio-city/backend/go/internal/handlers"
@@ -41,6 +42,17 @@ func main() {
 	auth.Post("/signup", authHandler.Signup)
 	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh", authHandler.Refresh)
+
+	// Media upload (no auth required for testing, add auth later)
+	mediaHandler := handlers.NewMediaHandler(
+		cfg.MediaEndpoint,
+		cfg.MediaBucket,
+		cfg.MediaAccessKey,
+		cfg.MediaSecretKey,
+		cfg.MediaURL,
+	)
+	media := app.Group("/api/media")
+	media.Post("/upload", mediaHandler.UploadMedia)
 
 	// Protected routes (auth required)
 	protected := app.Group("/api")
@@ -80,6 +92,23 @@ func main() {
 	protected.Get("/users/:id/following", followHandler.GetFollowing)
 	protected.Get("/users/:id/follow-counts", followHandler.GetFollowCounts)
 	protected.Get("/users/:id/is-following", followHandler.IsFollowing)
+
+	// DM routes
+	dmHandler := handlers.NewDMHandler()
+	protected.Get("/dm/conversations", dmHandler.GetConversations)
+	protected.Post("/dm/conversations", dmHandler.CreateConversation)
+	protected.Get("/dm/conversations/:id/messages", dmHandler.GetMessages)
+	protected.Post("/dm/conversations/:id/messages", dmHandler.SendMessage)
+
+	// WebSocket for DMs
+	app.Get("/ws/dm", dmHandler.ConnectWS)
+
+	// Notification routes
+	notificationHandler := handlers.NewNotificationHandler()
+	protected.Get("/notifications", notificationHandler.GetNotifications)
+	protected.Put("/notifications/:id/read", notificationHandler.MarkAsRead)
+	protected.Put("/notifications/read-all", notificationHandler.MarkAllAsRead)
+	protected.Get("/notifications/unread-count", notificationHandler.GetUnreadCount)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

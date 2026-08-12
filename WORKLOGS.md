@@ -72,7 +72,7 @@
 - No post/feed endpoints implemented yet
 
 ### Notes for next agent:
-- Go backend needs `go mod tidy` to resolve dependencies
+- Go is at `/usr/local/go/bin/go`
 - Frontend/admin need `npm install` to install packages
 - Auth system is scaffolded but not implemented (need login/signup endpoints)
 - Database migrations need to be applied to Supabase
@@ -255,3 +255,108 @@ GET  /api/auth/health    — Health check (no auth)
 - Refresh tokens expire in 30 days
 - Config loaded from environment variables (DATABASE_URL, JWT_SECRET, etc.)
 - Next step: Implement social OAuth (Google/GitHub) or move to Phase 2 (Posts/Feed)
+
+## [2026-08-12 17:30, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested: "skip social OAuth & Email verification for now, start implementing phase 2"
+- Roadmap Phase 2: Core Social Features
+
+### Plan for this session:
+- Implement Post service and handlers (CRUD + engagement)
+- Implement Follow service and handlers
+- Implement User service and handlers
+- Implement Feed service and handlers
+- Wire up all routes in main.go
+- Fix compilation errors and CI failures
+
+### Done:
+- Created `internal/services/post.go` — Post service with:
+  - `CreatePost()` — Create post with media
+  - `GetPost()` — Get single post with engagement
+  - `ListPosts()` — List posts with pagination
+  - `DeletePost()` — Soft delete post (ownership check)
+  - `LikePost()` / `UnlikePost()` — Toggle likes
+  - `CommentOnPost()` / `GetPostComments()` — Comments
+  - `RepostPost()` / `UnrepostPost()` — Reposts
+  - `BookmarkPost()` / `UnbookmarkPost()` — Bookmarks
+- Created `internal/handlers/post.go` — Post handlers for all endpoints
+- Created `internal/services/follow.go` — Follow service with:
+  - `FollowUser()` / `UnfollowUser()` — Follow/unfollow
+  - `IsFollowing()` — Check follow status
+  - `GetFollowers()` / `GetFollowing()` — List followers/following
+  - `GetUserFollowCounts()` — Follower/following counts
+- Created `internal/handlers/follow.go` — Follow handlers
+- Created `internal/services/user.go` — User service with:
+  - `GetUserByID()` / `GetUserByUsername()` — Get user profile
+  - `UpdateUser()` — Update profile (bio, avatar, cover)
+  - `SearchUsers()` — Search users by username/display_name
+- Created `internal/handlers/user.go` — User handlers
+- Created `internal/services/feed.go` — Feed service with:
+  - `ListFeed()` — Get feed with Following/Following tabs
+- Created `internal/handlers/feed.go` — Feed handler
+- Created `internal/handlers/helpers.go` — Helper functions for parsing
+- Updated `cmd/api/main.go` — Wired up all new routes
+
+### CI Fixes Applied:
+- Fixed Follow model composite key access (no ID field on composite key)
+- Fixed Count() int64 type mismatch (used int64 variables)
+- Fixed unused fmt import in feed service
+- Removed duplicate HealthHandler from helpers.go
+- Added fetch-depth: 0 for gitleaks security scan
+
+### Result:
+- **CI PASS** ✅ (run 31603329442, commit e30f1a4)
+  - backend: ✅ passed (18s)
+  - frontend: ✅ passed (25s)
+  - admin: ✅ passed (17s)
+  - security: ✅ passed (7s)
+
+### Phase 2 API Endpoints:
+```
+# Posts
+POST   /api/posts              — Create post
+GET    /api/posts              — List posts (feed)
+GET    /api/posts/:id          — Get post
+DELETE /api/posts/:id          — Delete post
+POST   /api/posts/:id/like     — Like post
+DELETE /api/posts/:id/like     — Unlike post
+POST   /api/posts/:id/comments — Comment on post
+GET    /api/posts/:id/comments — Get post comments
+POST   /api/posts/:id/repost   — Repost post
+DELETE /api/posts/:id/repost   — Unrepost post
+POST   /api/posts/:id/bookmark — Bookmark post
+DELETE /api/posts/:id/bookmark — Unbookmark post
+
+# Feed
+GET    /api/feed?tab=following — Following feed
+GET    /api/feed?tab=foryou    — For You feed
+
+# Users
+GET    /api/users/me           — Get current user
+PATCH  /api/users/me           — Update current user
+GET    /api/users/:username    — Get user by username
+GET    /api/search?q=term      — Search users
+
+# Follow
+POST   /api/users/:id/follow   — Follow user
+DELETE /api/users/:id/follow   — Unfollow user
+GET    /api/users/:id/followers    — Get followers
+GET    /api/users/:id/following    — Get following
+GET    /api/users/:id/follow-counts — Get follow counts
+GET    /api/users/:id/is-following — Check if following
+```
+
+### Left incomplete / blocked:
+- WebSocket server for DMs not started
+- No unit tests
+- Frontend not integrated with new endpoints
+- Media upload endpoint not implemented
+- Notification system not implemented
+
+### Notes for next agent:
+- All Phase 2 endpoints implemented and CI is green
+- Feed supports "following" and "foryou" tabs
+- Like/comment/repost/bookmark have duplicate prevention
+- Post deletion requires ownership check
+- User search uses LIKE query on username/display_name
+- Next step: WebSocket server for DMs (Phase 2.5) or move to frontend integration
