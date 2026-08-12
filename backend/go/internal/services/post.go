@@ -48,11 +48,12 @@ type GetPostOutput struct {
 	IsBookmarked bool        `json:"is_bookmarked"`
 }
 
-// ListPostsInput contains pagination params
+// ListPostsInput contains pagination and user filter/viewer params
 type ListPostsInput struct {
-	UserID  uint
-	Page    int
-	PerPage int
+	FilterUserID uint // Filter posts written by this author ID (0 = all posts)
+	ViewerUserID uint // Check is_liked, is_reposted, is_bookmarked for this viewer ID
+	Page         int
+	PerPage      int
 }
 
 // ListPostsOutput contains posts with pagination meta
@@ -203,8 +204,8 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 	var total int64
 
 	query := db.GetDB().Model(&models.Post{}).Where("deleted_at IS NULL")
-	if input.UserID > 0 {
-		query = query.Where("user_id = ?", input.UserID)
+	if input.FilterUserID > 0 {
+		query = query.Where("user_id = ?", input.FilterUserID)
 	}
 	query.Count(&total)
 
@@ -251,17 +252,18 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 		feedPost.Bookmarks = int(bookmarkCount)
 		feedPost.BookmarkCount = int(bookmarkCount)
 
-		if input.UserID > 0 {
+		// Check engagement status for the currently viewing user (ViewerUserID)
+		if input.ViewerUserID > 0 {
 			var like models.Like
-			db.GetDB().Model(&models.Like{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
+			db.GetDB().Model(&models.Like{}).Where("user_id = ? AND post_id = ?", input.ViewerUserID, post.ID).First(&like)
 			feedPost.IsLiked = like.ID > 0
 
 			var repost models.Repost
-			db.GetDB().Model(&models.Repost{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
+			db.GetDB().Model(&models.Repost{}).Where("user_id = ? AND post_id = ?", input.ViewerUserID, post.ID).First(&repost)
 			feedPost.IsReposted = repost.ID > 0
 
 			var bookmark models.Bookmark
-			db.GetDB().Model(&models.Bookmark{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
+			db.GetDB().Model(&models.Bookmark{}).Where("user_id = ? AND post_id = ?", input.ViewerUserID, post.ID).First(&bookmark)
 			feedPost.IsBookmarked = bookmark.ID > 0
 		}
 

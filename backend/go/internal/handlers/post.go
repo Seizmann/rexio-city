@@ -102,12 +102,21 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 func (h *PostHandler) ListPosts(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
-	userID, _ := strconv.Atoi(c.Query("user_id", "0"))
+	filterUserID, _ := strconv.Atoi(c.Query("user_id", "0"))
+
+	var viewerID uint
+	if u, ok := c.Locals("user_id").(uint); ok {
+		viewerID = u
+	} else {
+		cfg := config.Load()
+		viewerID = middleware.ExtractUserIDFromHeader(c.Get("Authorization"), cfg.JWTSecret)
+	}
 
 	input := services.ListPostsInput{
-		UserID:  uint(userID),
-		Page:    page,
-		PerPage: perPage,
+		FilterUserID: uint(filterUserID),
+		ViewerUserID: viewerID,
+		Page:         page,
+		PerPage:      perPage,
 	}
 
 	result, err := h.postService.ListPosts(input)
