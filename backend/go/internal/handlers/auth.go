@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"net/http"
-
 	"github.com/gofiber/fiber/v2"
-	"github.com/seizmann/rexio-city/backend/go/internal/middleware"
 	"github.com/seizmann/rexio-city/backend/go/internal/services"
 )
 
@@ -56,11 +53,11 @@ func (h *AuthHandler) Signup(c *fiber.Ctx) error {
 		DisplayName: input.DisplayName,
 	})
 	if err != nil {
-		status := fiber.StatusBadRequest
+		statusCode := fiber.StatusBadRequest
 		if err.Error() == "username already taken" || err.Error() == "email already registered" {
-			status = fiber.StatusConflict
+			statusCode = fiber.StatusConflict
 		}
-		return c.JSON(fiber.Map{
+		return c.Status(statusCode).JSON(fiber.Map{
 			"success": false,
 			"error":   fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
 		})
@@ -69,10 +66,10 @@ func (h *AuthHandler) Signup(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"user":         result.User,
-			"access_token": result.AccessToken,
+			"user":          result.User,
+			"access_token":  result.AccessToken,
 			"refresh_token": result.RefreshToken,
-			"expires_in":   result.ExpiresIn,
+			"expires_in":    result.ExpiresIn,
 		},
 	})
 }
@@ -101,10 +98,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"user":         result.User,
-			"access_token": result.AccessToken,
+			"user":          result.User,
+			"access_token":  result.AccessToken,
 			"refresh_token": result.RefreshToken,
-			"expires_in":   result.ExpiresIn,
+			"expires_in":    result.ExpiresIn,
 		},
 	})
 }
