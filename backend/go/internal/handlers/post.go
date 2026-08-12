@@ -97,13 +97,15 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 	})
 }
 
-// ListPosts handles GET /api/posts
+// ListPosts handles GET /api/posts (supports optional ?user_id= query filter)
 func (h *PostHandler) ListPosts(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
+	userID, _ := strconv.Atoi(c.Query("user_id", "0"))
 
 	input := services.ListPostsInput{
-		Page: page,
+		UserID:  uint(userID),
+		Page:    page,
 		PerPage: perPage,
 	}
 
