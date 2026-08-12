@@ -102,3 +102,46 @@
 - Go is at `/usr/local/go/bin/go`
 - All dependencies installed, ready for development
 - Next step: implement signup/login endpoints in backend
+
+## [2026-08-12 17:10, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested: "github ci failled kortche kn? gh cli diye check koro to"
+### Plan for this session:
+- Check CI failure logs using gh CLI
+- Identify root causes of CI failures
+- Fix CI workflow and missing configs
+- Re-run CI to verify
+
+### Root Causes Found:
+1. **Backend**: CI running from repo root, not `backend/go/` — `pattern ./...` error
+2. **Frontend**: No ESLint config (.eslintrc.json missing)
+3. **Admin**: Missing ESLint in devDependencies, no flat config
+
+### Fixes Applied:
+- Added `working-directory` to all CI jobs in `.github/workflows/ci.yml`
+- Created `frontend/.eslintrc.json` with Next.js recommended config
+- Created `admin/eslint.config.js` with typescript-eslint flat config
+- Added missing ESLint packages to admin/package.json:
+  - eslint@^9.0.0
+  - eslint-config-prettier
+  - eslint-plugin-react-hooks
+  - eslint-plugin-react-refresh
+  - typescript-eslint
+
+### Done:
+- CI workflow fixed with proper working directories
+- ESLint configs created for both frontend and admin
+- Dependencies installed in admin
+- Committed and pushed to origin/dev (commit e2dcb58)
+
+### Left incomplete / blocked:
+- Need to verify CI passes now (check run e2dcb58)
+
+### Notes for next agent:
+- CI jobs now run from correct directories:
+  - backend: `backend/go/`
+  - frontend: `frontend/`
+  - admin: `admin/`
+- Frontend uses `.eslintrc.json` (old format for Next.js)
+- Admin uses `eslint.config.js` (flat config, ESLint 9)
+- Next step: Verify CI passes, then implement auth endpoints
