@@ -13,7 +13,7 @@ import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
 
 export default function HomePage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('following');
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
@@ -79,7 +79,11 @@ export default function HomePage() {
   }
 
   function handlePostCreated(newPost: Post) {
-    setPosts((prev) => [newPost, ...prev]);
+    const postWithUser = {
+      ...newPost,
+      user: newPost.user?.username ? newPost.user : user!,
+    };
+    setPosts((prev) => [postWithUser, ...prev]);
   }
 
   function handlePostUpdate(updatedPost: Post) {
@@ -112,8 +116,12 @@ export default function HomePage() {
         </div>
       ) : (
         <div>
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} onUpdate={handlePostUpdate} />
+          {posts.map((post, idx) => (
+            <PostCard
+              key={post.id ? `post-${post.id}` : `post-idx-${idx}`}
+              post={post}
+              onUpdate={handlePostUpdate}
+            />
           ))}
 
           {hasMore && posts.length > 0 && (

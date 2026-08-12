@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './CommentSheet.module.css';
 import { api } from '@/lib/api';
 import { API } from '@/lib/constants';
-import type { Comment } from '@/lib/types';
+import type { Comment, User } from '@/lib/types';
 import { relativeTime } from '@/lib/time';
 import Button from '@/components/ui/Button';
 
@@ -110,35 +110,43 @@ export default function CommentSheet({
             </div>
           ) : (
             <div className={styles.commentList}>
-              {comments.map((comment) => (
-                <div key={comment.id} className={styles.comment}>
-                  {comment.user.avatar_url ? (
-                    <img
-                      src={comment.user.avatar_url}
-                      alt={comment.user.display_name}
-                      className={styles.avatar}
-                    />
-                  ) : (
-                    <div className={styles.avatarFallback}>
-                      {comment.user.display_name?.[0] || '?'}
+              {comments.map((comment) => {
+                const author: User = comment.user || {
+                  id: comment.user_id,
+                  username: 'user',
+                  display_name: 'Anonymous',
+                };
+
+                return (
+                  <div key={comment.id} className={styles.comment}>
+                    {author.avatar_url ? (
+                      <img
+                        src={author.avatar_url}
+                        alt={author.display_name}
+                        className={styles.avatar}
+                      />
+                    ) : (
+                      <div className={styles.avatarFallback}>
+                        {author.display_name?.[0] || author.username?.[0] || '?'}
+                      </div>
+                    )}
+                    <div className={styles.commentBody}>
+                      <div className={styles.authorRow}>
+                        <span className={styles.displayName}>
+                          {author.display_name || author.username}
+                        </span>
+                        <span className={styles.username}>
+                          @{author.username}
+                        </span>
+                        <span className={styles.timestamp}>
+                          {relativeTime(comment.created_at)}
+                        </span>
+                      </div>
+                      <div className={styles.text}>{comment.content}</div>
                     </div>
-                  )}
-                  <div className={styles.commentBody}>
-                    <div className={styles.authorRow}>
-                      <span className={styles.displayName}>
-                        {comment.user.display_name}
-                      </span>
-                      <span className={styles.username}>
-                        @{comment.user.username}
-                      </span>
-                      <span className={styles.timestamp}>
-                        {relativeTime(comment.created_at)}
-                      </span>
-                    </div>
-                    <div className={styles.text}>{comment.content}</div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

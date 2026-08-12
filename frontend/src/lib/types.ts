@@ -10,11 +10,11 @@ export interface User {
   username: string;
   display_name: string;
   email?: string; // only present on own profile
-  bio: string;
-  avatar_url: string;
-  cover_url: string;
-  created_at: string;
-  updated_at: string;
+  bio?: string;
+  avatar_url?: string;
+  cover_url?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /* ── Posts ─────────────────────────────────────────────────────── */
@@ -22,16 +22,19 @@ export interface User {
 export interface Post {
   id: number;
   user_id: number;
-  user: User;
+  user?: User;
   content: string;
-  media: PostMedia[];
-  like_count: number;
-  comment_count: number;
-  repost_count: number;
-  bookmark_count: number;
-  is_liked: boolean;
-  is_reposted: boolean;
-  is_bookmarked: boolean;
+  media?: PostMedia[];
+  like_count?: number;
+  likes?: number;
+  comment_count?: number;
+  comments?: number;
+  repost_count?: number;
+  reposts?: number;
+  bookmark_count?: number;
+  is_liked?: boolean;
+  is_reposted?: boolean;
+  is_bookmarked?: boolean;
   created_at: string;
 }
 
@@ -45,7 +48,7 @@ export interface PostMedia {
 export interface Comment {
   id: number;
   user_id: number;
-  user: User;
+  user?: User;
   post_id: number;
   parent_id: number | null;
   content: string;
