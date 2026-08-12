@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
