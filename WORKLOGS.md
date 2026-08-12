@@ -28,7 +28,7 @@
 - CI/CD workflow not created yet
 
 ### Notes for next agent:
-- Repo is on `dev` branch with 1 clean commit
+- Repo is on `dev` branch with 2 clean commits
 - Next step: scaffold monorepo structure per PRD Section 2
 - Must create: frontend/, admin/, backend/go/, docker/ directories
 - .gitignore must stay in place — never commit secrets!
