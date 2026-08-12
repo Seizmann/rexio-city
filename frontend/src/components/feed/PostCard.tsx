@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './PostCard.module.css';
 import { api } from '@/lib/api';
 import { API, ROUTES } from '@/lib/constants';
@@ -15,8 +16,11 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post, onUpdate }: PostCardProps) {
+  const router = useRouter();
   const [localPost, setLocalPost] = useState<Post>(post);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
+
+  const postIdentifier = localPost.public_id || localPost.id;
 
   // Author fallback if user relationship is undefined
   const author: User = localPost.user || {
@@ -30,9 +34,17 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
   const repostCount = localPost.repost_count ?? localPost.reposts ?? 0;
   const bookmarkCount = localPost.bookmark_count ?? 0;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a') || target.closest('textarea')) {
+      return;
+    }
+    router.push(ROUTES.POST(postIdentifier));
+  };
+
   const handleAction = async (
     actionType: 'like' | 'repost' | 'bookmark',
-    apiEndpoint: string | ((id: number) => string)
+    apiEndpoint: string | ((id: number | string) => string)
   ) => {
     const isCurrentlyActive = !!localPost[`is_${actionType}d` as keyof Post];
     const updatedIsActive = !isCurrentlyActive;
@@ -59,7 +71,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
     if (onUpdate) onUpdate(updatedPost);
 
     try {
-      const endpoint = typeof apiEndpoint === 'function' ? apiEndpoint(post.id) : apiEndpoint;
+      const endpoint = typeof apiEndpoint === 'function' ? apiEndpoint(postIdentifier) : apiEndpoint;
       if (isCurrentlyActive) {
         await api.delete(endpoint);
       } else {
@@ -86,7 +98,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
 
   return (
     <>
-      <article className={styles.card}>
+      <article className={styles.card} onClick={handleCardClick}>
         <Link href={ROUTES.PROFILE(author.username)}>
           {author.avatar_url ? (
             <img src={author.avatar_url} alt={author.display_name} className={styles.avatar} />
@@ -108,7 +120,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
           <div className={styles.actionRow}>
             <button
               className={`${styles.actionButton} ${localPost.is_liked ? styles.active : ''}`}
-              onClick={() => { void handleAction('like', API.POST_LIKE(post.id)); }}
+              onClick={() => { void handleAction('like', API.POST_LIKE(postIdentifier)); }}
               aria-label={localPost.is_liked ? 'Unlike' : 'Like'}
             >
               <svg viewBox="0 0 24 24" fill={localPost.is_liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,7 +142,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
 
             <button
               className={`${styles.actionButton} ${localPost.is_reposted ? styles.active : ''}`}
-              onClick={() => { void handleAction('repost', API.POST_REPOST(post.id)); }}
+              onClick={() => { void handleAction('repost', API.POST_REPOST(postIdentifier)); }}
               aria-label={localPost.is_reposted ? 'Undo Repost' : 'Repost'}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -144,7 +156,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
 
             <button
               className={`${styles.actionButton} ${localPost.is_bookmarked ? styles.active : ''}`}
-              onClick={() => { void handleAction('bookmark', API.POST_BOOKMARK(post.id)); }}
+              onClick={() => { void handleAction('bookmark', API.POST_BOOKMARK(postIdentifier)); }}
               aria-label={localPost.is_bookmarked ? 'Remove Bookmark' : 'Bookmark'}
             >
               <svg viewBox="0 0 24 24" fill={localPost.is_bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -157,7 +169,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
       </article>
 
       <CommentSheet
-        postId={post.id}
+        postId={typeof postIdentifier === 'number' ? postIdentifier : (localPost.id || 0)}
         isOpen={isCommentSheetOpen}
         onClose={() => setIsCommentSheetOpen(false)}
         onCommentAdded={handleCommentAdded}

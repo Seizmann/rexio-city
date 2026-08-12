@@ -10,7 +10,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 
 interface CommentSheetProps {
-  postId: number;
+  postId: number | string;
   isOpen: boolean;
   onClose: () => void;
   onCommentAdded?: () => void;

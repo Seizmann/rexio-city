@@ -25,6 +25,7 @@ export interface User {
 
 export interface Post {
   id: number;
+  public_id?: string;
   user_id: number;
   user?: User;
   content: string;

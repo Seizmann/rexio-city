@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || 'https://city.rexio.pro',
   ),
+  icons: {
+    icon: '/icon.webp',
+    shortcut: '/icon.webp',
+    apple: '/icon.webp',
+  },
 };
 
 export default function RootLayout({

@@ -9,6 +9,34 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// ExtractUserIDFromHeader parses Authorization Bearer token from header and returns user_id if valid
+func ExtractUserIDFromHeader(authHeader, jwtSecret string) uint {
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return 0
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fiber.ErrUnauthorized
+		}
+		return []byte(jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return 0
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0
+	}
+
+	if userID, ok := claims["user_id"].(float64); ok {
+		return uint(userID)
+	}
+	return 0
+}
+
 // Auth extracts and validates JWT from Authorization header
 func Auth(jwtSecret string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
