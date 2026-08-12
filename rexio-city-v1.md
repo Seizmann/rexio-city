@@ -1,9 +1,9 @@
 # RexiO City — Product Requirements Document (V1)
 
-**Status:** Planning  
+**Status:** Active Development  
 **Last Updated:** 2026-08-12  
 **Author:** SpritEX (Sijan)  
-**Version:** v1.0.0
+**Version:** v1.1.0
 
 ---
 
@@ -27,7 +27,7 @@ RexiO City is a public social platform combining Twitter-style short-form postin
 ```
 rexio-city/
 ├── frontend/              # Next.js 16 PWA — city.rexio.pro
-├── admin/                 # Vite + Tailwind — separate admin app
+├── admin/                 # Vite + Tailwind — oppscity.rexio.pro
 ├── backend/
 │   ├── go/
 │   │   ├── cmd/api/       # Main platform backend (port 10800)
@@ -67,9 +67,41 @@ rexio-city/
 
 ---
 
-## 4. Feature Requirements
+## 4. Domains & Deployment
 
-### 4.1 Authentication
+| App | Environment | Domain |
+|---|---|---|
+| Frontend (Next.js) | Production | city.rexio.pro |
+| Frontend (Next.js) | Dev preview | dev-city.rexio.pro |
+| Admin (Vite) | Production | oppscity.rexio.pro |
+| Admin (Vite) | Local dev | localhost:5189 |
+| Backend (main) | Dev (Cloudflare Tunnel) | dev-connect2city.spritexai.dpdns.org |
+| Backend (main) | Production (future VPS) | connect2city.spritexai.dpdns.org |
+| Media/CDN | All | cdn-city.rexio.pro |
+
+### Deployment Targets
+
+```bash
+# Frontend (Vercel)
+Production: https://city.rexio.pro
+Preview:    https://dev-city.rexio.pro
+
+# Admin (Vercel)
+Production: https://oppscity.rexio.pro
+
+# Backend (Cloudflare Tunnel)
+Dev:        https://dev-connect2city.spritexai.dpdns.org
+Production: https://connect2city.spritexai.dpdns.org
+
+# Media CDN
+All:        https://cdn-city.rexio.pro
+```
+
+---
+
+## 5. Feature Requirements
+
+### 5.1 Authentication
 
 **Methods:**
 - Email/password with argon2id hashing
@@ -84,7 +116,7 @@ rexio-city/
 3. Refresh token rotation on each use
 4. Social auth (Google/GitHub) → custom JWT issued
 
-### 4.2 Feed
+### 5.2 Feed
 
 **Tabs:**
 - Following: Posts from followed users only
@@ -100,7 +132,7 @@ rexio-city/
 - `GET /api/posts/feed?tab=following|foryou&page=N`
 - `GET /api/posts/feed/ranking` (scoring weights, DB-driven)
 
-### 4.3 Posts
+### 5.3 Posts
 
 **Types:**
 - Text only (max 500 chars)
@@ -120,7 +152,7 @@ rexio-city/
 - `GET /api/posts/user/:username` — User's posts
 - `DELETE /api/posts/:id` — Delete (owner only)
 
-### 4.4 Engagement
+### 5.4 Engagement
 
 **Actions:**
 - Like/unlike
@@ -134,7 +166,7 @@ rexio-city/
 - `POST /api/posts/:id/repost`
 - `POST /api/posts/:id/bookmark`
 
-### 4.5 Profiles
+### 5.5 Profiles
 
 **Fields:**
 - Username (unique, lowercase, 3-15 chars)
@@ -150,7 +182,7 @@ rexio-city/
 - Replies
 - Media
 
-### 4.6 Follow System
+### 5.6 Follow System
 
 - Follow/unfollow
 - Mutual check
@@ -162,7 +194,7 @@ rexio-city/
 - `GET /api/users/:id/following`
 - `GET /api/users/:id/followers`
 
-### 4.7 Direct Messages (DMs)
+### 5.7 Direct Messages (DMs)
 
 **Requirements:**
 - Real-time via WebSocket
@@ -183,7 +215,7 @@ rexio-city/
 - `POST /api/dms/:thread/messages`
 - `WS /ws/dms` — WebSocket endpoint
 
-### 4.8 Notifications
+### 5.8 Notifications
 
 **Types:**
 - New follower
@@ -198,7 +230,7 @@ rexio-city/
 - Email via Brevo (configurable)
 - Push notification (PWA)
 
-### 4.9 Search
+### 5.9 Search
 
 **Searchable:**
 - Users (username, display name)
@@ -210,11 +242,15 @@ rexio-city/
 
 ---
 
-## 5. API Design
+## 6. API Design
 
 ### Base URLs
-- Main API: `https://api.rexio.pro` (via Cloudflare Tunnel)
-- Admin API: `https://admin-api.rexio.pro` (separate tunnel)
+
+| Service | Environment | URL |
+|---|---|---|
+| Main API | Dev | `https://dev-connect2city.spritexai.dpdns.org` |
+| Main API | Production | `https://connect2city.spritexai.dpdns.org` |
+| Media CDN | All | `https://cdn-city.rexio.pro` |
 
 ### Response Format
 ```json
@@ -246,10 +282,10 @@ rexio-city/
 
 ---
 
-## 6. Security Requirements
+## 7. Security Requirements
 
 - No direct Supabase from browser — all API calls through Go backend
-- CORS: Only allow `city.rexio.pro` origin
+- CORS: Only allow frontend domains
 - Rate limiting on all endpoints
 - Input validation and sanitization
 - Password hashing: argon2id
@@ -259,7 +295,7 @@ rexio-city/
 
 ---
 
-## 7. Database Schema (High-Level)
+## 8. Database Schema (High-Level)
 
 ```sql
 -- Users
@@ -294,7 +330,7 @@ settings (key, value, updated_at)
 
 ---
 
-## 8. Admin Features
+## 9. Admin Features
 
 - User management (view, ban, delete)
 - Post moderation (view, delete, hide)
@@ -304,7 +340,7 @@ settings (key, value, updated_at)
 
 ---
 
-## 9. Deployment
+## 10. Deployment
 
 ### Frontend (Next.js)
 - Hosted on Vercel
@@ -313,12 +349,12 @@ settings (key, value, updated_at)
 
 ### Backend (Go)
 - Hosted on Hetzner VPS via Cloudflare Tunnel
-- Domain: `api.rexio.pro`
+- Domain: `connect2city.spritexai.dpdns.org`
 - Two separate services: main API + admin API
 
 ### Admin Panel (Vite)
 - Hosted on Vercel
-- Domain: `admin.rexio.pro`
+- Domain: `oppscity.rexio.pro`
 
 ### Media
 - Cloudflare R2 bucket
@@ -333,7 +369,7 @@ settings (key, value, updated_at)
 
 ---
 
-## 10. Non-Goals (V1)
+## 11. Non-Goals (V1)
 
 - End-to-end encryption for DMs
 - Video calling
@@ -344,7 +380,7 @@ settings (key, value, updated_at)
 
 ---
 
-## 11. Success Metrics
+## 12. Success Metrics
 
 - Response time: <200ms for API
 - Uptime: 99.9%
@@ -353,12 +389,13 @@ settings (key, value, updated_at)
 
 ---
 
-## 12. References
+## 13. References
 
 - `AGENTS.md` — Agent workflow rules
 - `DESIGN.md` — Visual design system
-- `DECISIONS.md` — Architecture decisions (to be created)
-- `BRANDING.md` — Brand guidelines (to be created)
+- `DECISIONS.md` — Architecture decisions
+- `BRANDING.md` — Brand guidelines
+- `ROADMAP.md` — Project roadmap
 
 ---
 
