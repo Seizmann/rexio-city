@@ -75,7 +75,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
       if (isCurrentlyActive) {
         await api.delete(endpoint);
       } else {
-        await api.post(endpoint);
+        await api.post(endpoint, {});
       }
     } catch (error: unknown) {
       console.error(`Failed to toggle ${actionType}:`, error);
