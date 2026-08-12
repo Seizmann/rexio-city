@@ -30,10 +30,11 @@ func (s *TypingIndicatorService) StartTyping(conversationID uint, userID uint) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.typingUsers[string(conversationID)] == nil {
-		s.typingUsers[string(conversationID)] = make(map[uint]time.Time)
+	convKey := fmt.Sprintf("%d", conversationID)
+	if s.typingUsers[convKey] == nil {
+		s.typingUsers[convKey] = make(map[uint]time.Time)
 	}
-	s.typingUsers[string(conversationID)][userID] = time.Now()
+	s.typingUsers[convKey][userID] = time.Now()
 
 	// Broadcast to other participants
 	if s.broadcastFunc != nil {
@@ -49,7 +50,8 @@ func (s *TypingIndicatorService) StopTyping(conversationID uint, userID uint) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.typingUsers[string(conversationID)], userID)
+	convKey := fmt.Sprintf("%d", conversationID)
+	delete(s.typingUsers[convKey], userID)
 
 	// Broadcast to other participants
 	if s.broadcastFunc != nil {
@@ -62,11 +64,12 @@ func (s *TypingIndicatorService) IsTyping(conversationID uint, userID uint) bool
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	users, ok := s.typingUsers[string(conversationID)]
+	convKey := fmt.Sprintf("%d", conversationID)
+	users, ok := s.typingUsers[convKey]
 	if !ok {
 		return false
 	}
-	
+
 	timestamp, ok := users[userID]
 	if !ok {
 		return false
@@ -81,7 +84,8 @@ func (s *TypingIndicatorService) GetTypingUsers(conversationID uint) []uint {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	users, ok := s.typingUsers[string(conversationID)]
+	convKey := fmt.Sprintf("%d", conversationID)
+	users, ok := s.typingUsers[convKey]
 	if !ok {
 		return []uint{}
 	}
@@ -107,14 +111,14 @@ func (s *TypingIndicatorService) CleanupExpiredTyping() {
 	defer s.mu.Unlock()
 
 	now := time.Now()
-	for convID, users := range s.typingUsers {
+	for convKey, users := range s.typingUsers {
 		for userID, timestamp := range users {
 			if now.Sub(timestamp) > 5*time.Second {
 				delete(users, userID)
 			}
 		}
 		if len(users) == 0 {
-			delete(s.typingUsers, convID)
+			delete(s.typingUsers, convKey)
 		}
 	}
 }
@@ -124,7 +128,8 @@ func (s *TypingIndicatorService) GetTypingStatus(conversationID uint, excludeUse
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	users, ok := s.typingUsers[string(conversationID)]
+	convKey := fmt.Sprintf("%d", conversationID)
+	users, ok := s.typingUsers[convKey]
 	if !ok {
 		return []TypingUser{}
 	}
@@ -143,7 +148,7 @@ func (s *TypingIndicatorService) GetTypingStatus(conversationID uint, excludeUse
 
 // TypingUser represents a user who is typing
 type TypingUser struct {
-	UserID    uint    `json:"user_id"`
+	UserID    uint      `json:"user_id"`
 	StartedAt time.Time `json:"started_at"`
 }
 
