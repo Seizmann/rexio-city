@@ -548,6 +548,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Block 4 (Profile)**: `ProfileHeader` (cover, avatar overlap, follow/following counts), `ProfileTabs`, `EditProfileModal`, follow/unfollow toggle.
   - **Block 5 (Polish)**: `Skeleton` & `PostCardSkeleton` loading states, `Toast` notification system, zero compilation & zero lint errors.
   - **Landing Auth Screen on `/`**: Added `LandingAuth` component so when unauthenticated users visit `/` directly, they see a Twitter/X style landing hero + inline Log in / Sign up form without needing a redirect delay.
+  - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
