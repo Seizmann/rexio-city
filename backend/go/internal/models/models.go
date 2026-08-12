@@ -4,14 +4,17 @@ import "time"
 
 // User represents a platform user
 type User struct {
-	ID           uint      `json:"id" gorm:"primaryKey"`
-	Username     string    `json:"username" gorm:"uniqueIndex;size:15"`
-	DisplayName  *string   `json:"display_name" gorm:"size:50"`
-	Bio          *string   `json:"bio" gorm:"size:160"`
-	AvatarURL    *string   `json:"avatar_url"`
-	CoverURL     *string   `json:"cover_url"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID             uint       `json:"id" gorm:"primaryKey"`
+	Username       string     `json:"username" gorm:"uniqueIndex;size:15"`
+	DisplayName    *string    `json:"display_name" gorm:"size:50"`
+	Bio            *string    `json:"bio" gorm:"size:160"`
+	AvatarURL      *string    `json:"avatar_url"`
+	CoverURL       *string    `json:"cover_url"`
+	Email          *string    `json:"email" gorm:"uniqueIndex"`
+	PasswordHash   string     `json:"-" gorm:"size:255"`
+	EmailVerified  bool       `json:"email_verified" gorm:"default:false"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // Post represents a social post
@@ -27,11 +30,11 @@ type Post struct {
 
 // PostMedia represents media attached to a post
 type PostMedia struct {
-	ID       uint      `json:"id" gorm:"primaryKey"`
-	PostID   uint      `json:"post_id"`
-	MediaURL string    `json:"media_url"`
-	MediaType string   `json:"media_type"` // photo, video, voice
-	Order    int       `json:"order"`
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	PostID    uint      `json:"post_id"`
+	MediaURL  string    `json:"media_url"`
+	MediaType string    `json:"media_type"` // photo, video, voice
+	Order     int       `json:"order"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -116,4 +119,13 @@ type Setting struct {
 	Key       string    `json:"key" gorm:"primaryKey;size:100"`
 	Value     string    `json:"value"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// RefreshToken represents a refresh token
+type RefreshToken struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	UserID    uint      `json:"user_id"`
+	Token     string    `json:"token" gorm:"uniqueIndex"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
 }

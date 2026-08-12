@@ -112,7 +112,7 @@ func AuthAdmin(jwtSecret string) fiber.Handler {
 
 // GenerateJWT creates a new JWT token
 func GenerateJWT(userID uint, secret string, expiry time.Duration) (string, error) {
- claims := jwt.MapClaims{
+	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(expiry).Unix(),
 		"iat":     time.Now().Unix(),
@@ -133,4 +133,30 @@ func GenerateRefreshToken(userID uint, secret string, expiry time.Duration) (str
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
+}
+
+// ParseRefreshToken parses and validates a refresh token
+func ParseRefreshToken(tokenString string) (*jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fiber.ErrUnauthorized
+		}
+		return []byte("TODO_CONFIG"), nil // Will be configured later
+	})
+
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fiber.ErrUnauthorized
+	}
+
+	// Verify it's a refresh token
+	if claims["type"] != "refresh" {
+		return nil, errors.New("not a refresh token")
+	}
+
+	return &claims, nil
 }

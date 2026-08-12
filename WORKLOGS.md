@@ -145,3 +145,29 @@
 - Frontend uses `.eslintrc.json` (old format for Next.js)
 - Admin uses `eslint.config.js` (flat config, ESLint 9)
 - Next step: Verify CI passes, then implement auth endpoints
+
+## [2026-08-12 17:15, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- CI failures from previous run (commit 5d52ede)
+- Backend: `os` import not used in main.go files
+- Admin: tsconfig.node.json emit error
+- Frontend: `next lint` command broken in Next.js 16
+
+### Fixes Applied:
+- Removed unused `os` import from `backend/go/cmd/api/main.go` and `cmd/admin/main.go`
+- Fixed `admin/tsconfig.node.json` — added `"noEmit": false`
+- Created `frontend/eslint.config.js` with flat config (ESLint 9)
+- Added `"type": "module"` to `frontend/package.json`
+- Changed lint script from `"next lint"` to `"eslint src"` (next lint is broken)
+
+### Result:
+- **CI PASS** ✅ (run 31594745880, commit 02a9cc4)
+  - backend: ✅ passed
+  - frontend: ✅ passed
+  - admin: ✅ passed
+  - security: ✅ passed (gitleaks)
+
+### Notes for next agent:
+- CI is now fully green
+- All jobs pass on push to dev branch
+- Next step: Implement auth endpoints (signup, login, social OAuth)

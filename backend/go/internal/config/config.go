@@ -3,39 +3,43 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
-	Port            string
-	DatabaseURL     string
-	RedisURL        string
-	JWTSecret       string
-	JWTExpiry       string
-	RefreshSecret   string
-	RefreshExpiry   string
-	FrontendURL     string
-	AdminURL        string
-	BrevoAPIKey     string
-	BrevoFromEmail  string
-	R2AccountID     string
-	R2AccessKeyID   string
-	R2SecretKey     string
-	R2Bucket        string
-	GoogleClientID  string
+	Port               string
+	DatabaseURL        string
+	RedisURL           string
+	JWTSecret          string
+	JWTExpiry          time.Duration
+	RefreshSecret      string
+	RefreshExpiry      time.Duration
+	FrontendURL        string
+	AdminURL           string
+	BrevoAPIKey        string
+	BrevoFromEmail     string
+	R2AccountID        string
+	R2AccessKeyID      string
+	R2SecretKey        string
+	R2Bucket           string
+	GoogleClientID     string
 	GoogleClientSecret string
-	GitHubClientID  string
+	GitHubClientID     string
 	GitHubClientSecret string
 }
 
 func Load() *Config {
+	jwtExpiry, _ := time.ParseDuration(getEnv("JWT_EXPIRY", "15m"))
+	refreshExpiry, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "720h"))
+
 	return &Config{
 		Port:               getEnv("PORT", "10800"),
 		DatabaseURL:        getEnv("DATABASE_URL", ""),
 		RedisURL:           getEnv("REDIS_URL", ""),
 		JWTSecret:          getEnv("JWT_SECRET", ""),
-		JWTExpiry:          getEnv("JWT_EXPIRY", "15m"),
+		JWTExpiry:          jwtExpiry,
 		RefreshSecret:      getEnv("REFRESH_TOKEN_SECRET", ""),
-		RefreshExpiry:      getEnv("REFRESH_TOKEN_EXPIRY", "720h"),
+		RefreshExpiry:      refreshExpiry,
 		FrontendURL:        getEnv("FRONTEND_URL", "https://city.rexio.pro"),
 		AdminURL:           getEnv("ADMIN_URL", "https://admin.rexio.pro"),
 		BrevoAPIKey:        getEnv("BREVO_API_KEY", ""),
@@ -52,14 +56,17 @@ func Load() *Config {
 }
 
 func LoadAdmin() *Config {
+	jwtExpiry, _ := time.ParseDuration(getEnv("JWT_EXPIRY", "15m"))
+	refreshExpiry, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "720h"))
+
 	return &Config{
 		Port:            getEnv("PORT", "10900"),
 		DatabaseURL:     getEnv("DATABASE_URL", ""),
 		RedisURL:        getEnv("REDIS_URL", ""),
 		JWTSecret:       getEnv("JWT_SECRET", ""),
-		JWTExpiry:       getEnv("JWT_EXPIRY", "15m"),
+		JWTExpiry:       jwtExpiry,
 		RefreshSecret:   getEnv("REFRESH_TOKEN_SECRET", ""),
-		RefreshExpiry:   getEnv("REFRESH_TOKEN_EXPIRY", "720h"),
+		RefreshExpiry:   refreshExpiry,
 		FrontendURL:     getEnv("FRONTEND_URL", "https://city.rexio.pro"),
 		AdminURL:        getEnv("ADMIN_URL", "https://admin.rexio.pro"),
 		BrevoAPIKey:     getEnv("BREVO_API_KEY", ""),
