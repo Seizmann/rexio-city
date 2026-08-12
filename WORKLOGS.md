@@ -551,7 +551,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
-  - **Backend Auth Fix**: Updated `AuthService` in `backend/go/internal/services/auth.go` to support case-insensitive email/username matching (`LOWER(email) = ? OR LOWER(username) = ?`), allowing users to log in with either their email OR username.
+  - **Backend Prepared Statement Fix (42P05)**: Configured `PreferSimpleProtocol: true` and `PrepareStmt: false` in `backend/go/internal/db/db.go` to eliminate GORM/PgBouncer `stmtcache` prepared statement collision errors.
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:
