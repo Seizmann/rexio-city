@@ -26,16 +26,17 @@ export async function POST(request: NextRequest) {
   try {
     const targetUrl = `${BACKEND_URL}/api/media/upload`;
 
-    // Forward auth, CSRF, and cookie headers — same as the main proxy middleware.
+    // Forward auth, CSRF, cookie, and Content-Type headers.
+    // Content-Type MUST be forwarded because it contains the multipart/form-data boundary.
     const forwardHeaders = new Headers();
+    const contentType = request.headers.get('content-type');
+    if (contentType) forwardHeaders.set('content-type', contentType);
     const auth = request.headers.get('Authorization');
     if (auth) forwardHeaders.set('Authorization', auth);
     const csrf = request.headers.get('X-CSRF-Token');
     if (csrf) forwardHeaders.set('X-CSRF-Token', csrf);
     const cookie = request.headers.get('Cookie');
     if (cookie) forwardHeaders.set('Cookie', cookie);
-    // Do NOT set Content-Type — let fetch derive it from the FormData body
-    // so the multipart boundary is included automatically.
 
     // Stream the raw request body directly to the Go backend.
     // request.body is a ReadableStream; passing it avoids buffering the whole
