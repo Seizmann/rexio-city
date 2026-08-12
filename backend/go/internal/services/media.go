@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -24,9 +25,9 @@ type MediaService struct {
 // NewMediaService creates a new media service
 func NewMediaService(endpoint, bucket, accessKey, secretKey, url string) *MediaService {
 	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("auto"),
-		Endpoint:    aws.String(endpoint),
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+		Region:         aws.String("auto"),
+		Endpoint:       aws.String(endpoint),
+		Credentials:    credentials.NewStaticCredentials(accessKey, secretKey, ""),
 		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {
@@ -65,8 +66,7 @@ func (s *MediaService) UploadMedia(file multipart.File, header *multipart.FileHe
 
 	// Generate unique filename
 	ext := filepath.Ext(header.Filename)
-	filename := fmt.Sprintf("%d%s", header.Size, ext)
-	key := fmt.Sprintf("media/%d/%s", filename)
+	key := fmt.Sprintf("media/%d%s", header.Size, ext)
 
 	// Read file content
 	content, err := io.ReadAll(file)
@@ -76,10 +76,10 @@ func (s *MediaService) UploadMedia(file multipart.File, header *multipart.FileHe
 
 	// Upload to S3/MinIO
 	_, err = s.s3Client.PutObject(&s3.PutObjectInput{
-		Bucket:       aws.String(s.bucket),
-		Key:          aws.String(key),
-		Body:         aws.NewReader(content),
-		ContentType:  aws.String(contentType),
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(content),
+		ContentType:   aws.String(contentType),
 		ContentLength: aws.Int64(int64(len(content))),
 	})
 	if err != nil {

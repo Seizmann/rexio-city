@@ -44,8 +44,8 @@ func (s *EventService) OnLikeCreated(like *models.Like) error {
 	notificationService := NewNotificationService()
 	_, err := notificationService.TriggerNotification(
 		"like",
-		like.UserID, // post owner
-		like.UserID, // liker (same for now, will be different in real impl)
+		like.UserID,
+		like.UserID,
 		&like.PostID,
 	)
 	return err
@@ -56,8 +56,8 @@ func (s *EventService) OnCommentCreated(comment *models.Comment) error {
 	notificationService := NewNotificationService()
 	_, err := notificationService.TriggerNotification(
 		"comment",
-		comment.UserID, // post owner
-		comment.UserID, // commenter
+		comment.UserID,
+		comment.UserID,
 		&comment.PostID,
 	)
 	return err
@@ -86,4 +86,9 @@ func (s *EventService) OnDMReceived(senderID, recipientID uint, conversationID u
 		&postID,
 	)
 	return err
+}
+
+// Helper to get current time
+func now() time.Time {
+	return time.Now()
 }

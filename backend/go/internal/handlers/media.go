@@ -27,7 +27,16 @@ func (h *MediaHandler) UploadMedia(c *fiber.Ctx) error {
 		})
 	}
 
-	result, err := h.mediaService.UploadMedia(file.Open, file)
+	f, err := file.Open()
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error": fiber.Map{"code": "UPLOAD_ERROR", "message": err.Error()},
+		})
+	}
+	defer f.Close()
+
+	result, err := h.mediaService.UploadMedia(f, file)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,

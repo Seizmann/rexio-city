@@ -6,19 +6,20 @@ import (
 )
 
 type Config struct {
-	Port            string
-	DatabaseURL     string
-	RedisURL        string
-	JWTSecret       string
-	JWTExpiry       time.Duration
-	RefreshSecret   string
-	RefreshExpiry   time.Duration
-	FrontendURL     string
-	MediaEndpoint   string
-	MediaBucket     string
-	MediaAccessKey  string
-	MediaSecretKey  string
-	MediaURL        string
+	Port           string
+	DatabaseURL    string
+	RedisURL       string
+	JWTSecret      string
+	JWTExpiry      time.Duration
+	RefreshSecret  string
+	RefreshExpiry  time.Duration
+	FrontendURL    string
+	AdminURL       string
+	MediaEndpoint  string
+	MediaBucket    string
+	MediaAccessKey string
+	MediaSecretKey string
+	MediaURL       string
 }
 
 func Load() *Config {
@@ -31,12 +32,17 @@ func Load() *Config {
 		RefreshSecret: getEnv("REFRESH_SECRET", "dev-refresh-secret-change-in-production"),
 		RefreshExpiry: parseDuration("REFRESH_EXPIRY", "720h"), // 30 days
 		FrontendURL:   getEnv("FRONTEND_URL", "http://localhost:3000"),
+		AdminURL:      getEnv("ADMIN_URL", "http://localhost:5173"),
 		MediaEndpoint: getEnv("MEDIA_ENDPOINT", "http://localhost:9000"),
 		MediaBucket:   getEnv("MEDIA_BUCKET", "rexio-city"),
 		MediaAccessKey: getEnv("MEDIA_ACCESS_KEY", "minioadmin"),
 		MediaSecretKey: getEnv("MEDIA_SECRET_KEY", "minioadmin"),
 		MediaURL:      getEnv("MEDIA_URL", "http://localhost:9000"),
 	}
+}
+
+func LoadAdmin() *Config {
+	return Load()
 }
 
 func getEnv(key, defaultVal string) string {

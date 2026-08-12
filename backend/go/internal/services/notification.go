@@ -18,15 +18,15 @@ func NewNotificationService() *NotificationService {
 
 // Notification represents a notification
 type Notification struct {
-	ID        uint      `json:"id"`
-	UserID    uint      `json:"user_id"`
-	Type      string    `json:"type"`
-	ActorID   *uint     `json:"actor_id"`
-	PostID    *uint     `json:"post_id"`
-	Actor     *UserBasic `json:"actor"`
-	Post      *PostBasic `json:"post"`
-	ReadAt    *time.Time `json:"read_at"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        uint        `json:"id"`
+	UserID    uint        `json:"user_id"`
+	Type      string      `json:"type"`
+	ActorID   *uint       `json:"actor_id"`
+	PostID    *uint       `json:"post_id"`
+	Actor     *UserBasic  `json:"actor"`
+	Post      *PostBasic  `json:"post"`
+	ReadAt    *time.Time  `json:"read_at"`
+	CreatedAt time.Time   `json:"created_at"`
 }
 
 // UserBasic contains basic user info
@@ -44,10 +44,10 @@ type PostBasic struct {
 
 // CreateNotificationInput contains notification creation data
 type CreateNotificationInput struct {
-	UserID uint
-	Type   string // follower, like, comment, repost, mention, dm_reply
+	UserID  uint
+	Type    string // follower, like, comment, repost, mention, dm_reply
 	ActorID *uint
-	PostID *uint
+	PostID  *uint
 }
 
 // GetNotificationsInput contains pagination params
@@ -80,10 +80,10 @@ func (s *NotificationService) CreateNotification(input CreateNotificationInput) 
 	}
 
 	notification := models.Notification{
-		UserID:  input.UserID,
-		Type:    input.Type,
-		ActorID: input.ActorID,
-		PostID:  input.PostID,
+		UserID:    input.UserID,
+		Type:      input.Type,
+		ActorID:   input.ActorID,
+		PostID:    input.PostID,
 		CreatedAt: time.Now(),
 	}
 
@@ -169,19 +169,12 @@ func (s *NotificationService) GetUnreadCount(userID uint) (int, error) {
 // getNotificationDetail retrieves detailed notification info
 func (s *NotificationService) getNotificationDetail(notificationID uint) (*Notification, error) {
 	var notification models.Notification
-	result := db.GetDB().First(&notification, notificationID)
+	result := db.GetDB().Where("id = ?", notificationID).First(&notification)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	result = db.GetDB().
-		Where("id = ?", notificationID).
-		First(&notification)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
- notif := &Notification{
+	notif := &Notification{
 		ID:        notification.ID,
 		UserID:    notification.UserID,
 		Type:      notification.Type,

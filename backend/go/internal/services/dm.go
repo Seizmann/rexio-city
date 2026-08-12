@@ -5,12 +5,10 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gofiber/websocket/v2"
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
 	"github.com/seizmann/rexio-city/backend/go/internal/models"
@@ -26,25 +24,25 @@ func NewDMService() *DMService {
 
 // DMConnection represents a WebSocket connection
 type DMConnection struct {
-	ID        string
-	UserID    uint
-	Conn      *websocket.Conn
-	Send      chan []byte
+	ID     string
+	UserID uint
+	Conn   *websocket.Conn
+	Send   chan []byte
 }
 
 // Conversation represents a DM conversation
 type Conversation struct {
-	ID        uint             `json:"id"`
-	Participants []Participant `json:"participants"`
-	LatestMessage *DMMessage   `json:"latest_message"`
-	CreatedAt time.Time      `json:"created_at"`
+	ID             uint             `json:"id"`
+	Participants   []Participant    `json:"participants"`
+	LatestMessage  *DMMessage       `json:"latest_message"`
+	CreatedAt      time.Time        `json:"created_at"`
 }
 
 // Participant represents a user in a conversation
 type Participant struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	AvatarURL string `json:"avatar_url"`
+	UserID    uint    `json:"user_id"`
+	Username  string  `json:"username"`
+	AvatarURL *string `json:"avatar_url"`
 }
 
 // DMMessage represents a decrypted DM message
@@ -61,7 +59,7 @@ type DMMessage struct {
 
 // CreateConversationInput contains conversation creation data
 type CreateConversationInput struct {
-	UserID       uint
+	UserID           uint
 	ParticipantIDs []uint
 }
 
@@ -101,7 +99,6 @@ func (s *DMService) NewConversation(input CreateConversationInput) (*Conversatio
 		Where("dm_participants.user_id = ?", input.UserID).
 		First(&existing)
 	if result.Error == nil {
-		// Check if all participants are in this conversation
 		var participantCount int64
 		db.GetDB().Model(&models.DMParticipant{}).
 			Where("conversation_id = ?", existing.ID).
@@ -175,7 +172,6 @@ func (s *DMService) SendMessage(input SendMessageInput) (*DMMessage, error) {
 		ConversationID: message.ConversationID,
 		SenderID:       message.SenderID,
 		SenderName:     sender.Username,
-		Content:        "", // Encrypted
 		EncryptedData:  input.EncryptedData,
 		IV:             input.IV,
 		CreatedAt:      message.CreatedAt,
@@ -194,7 +190,6 @@ func (s *DMService) GetConversations(input GetConversationsInput) ([]Conversatio
 	var conversations []models.DMConversation
 	var total int64
 
-	// Get conversations where user is a participant
 	db.GetDB().
 		Joins("INNER JOIN dm_participants ON dm_conversations.id = dm_participants.conversation_id").
 		Where("dm_participants.user_id = ?", input.UserID).
@@ -269,8 +264,8 @@ func (s *DMService) getConversationDetail(conversationID uint) (*Conversation, e
 		var user models.User
 		db.GetDB().First(&user, p.UserID)
 		participantList = append(participantList, Participant{
-			UserID:   user.ID,
-			Username: user.Username,
+			UserID:    user.ID,
+			Username:  user.Username,
 			AvatarURL: user.AvatarURL,
 		})
 	}
@@ -295,10 +290,10 @@ func (s *DMService) getConversationDetail(conversationID uint) (*Conversation, e
 	}
 
 	return &Conversation{
-		ID:             conversation.ID,
-		Participants:   participantList,
-		LatestMessage:  latestMessage,
-		CreatedAt:      conversation.CreatedAt,
+		ID:            conversation.ID,
+		Participants:  participantList,
+		LatestMessage: latestMessage,
+		CreatedAt:     conversation.CreatedAt,
 	}, nil
 }
 

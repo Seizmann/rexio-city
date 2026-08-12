@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -138,9 +139,7 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 // ConnectWS handles WebSocket connection for real-time DMs
 func (h *DMHandler) ConnectWS(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
-	conn, err := websocket.Upgrader{
-		CheckOrigin: func(r *fiber.Ctx) bool { return true },
-	}.Upgrade(c.Writer, c.Request, nil)
+	conn, err := websocket.Upgrder.Upgrade(c, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -210,12 +209,15 @@ func (h *DMHandler) handleWSMessage(conn *services.DMConnection, message []byte)
 
 // broadcastToConversation broadcasts a message to all participants
 func (h *DMHandler) broadcastToConversation(conversationID uint, message *services.DMMessage) {
-	// Get all participants
-	conversations := make(map[uint]bool)
-	// In real implementation, fetch from database
-	// For now, send to all connected clients
+	// In real implementation, track which users are in which conversations
+	// For now, broadcast to all connected clients
 	for _, client := range h.wsClients {
-		client.Send <- []byte(fmt.Sprintf(`{"type":"new_message","conversation_id":%d}`, conversationID))
+		msg := fmt.Sprintf(`{"type":"new_message","conversation_id":%d}`, conversationID)
+		select {
+		case client.Send <- []byte(msg):
+		default:
+			// Client buffer full, skip
+		}
 	}
 }
 
