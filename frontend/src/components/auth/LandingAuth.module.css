@@ -19,26 +19,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-bottom: var(--space-2);
 }
 
 .brandIcon {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   border-radius: var(--radius-sm);
 }
 
 .logo {
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: var(--accent);
   letter-spacing: -0.03em;
 }
 
 .tagline {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--text-muted);
   font-weight: 500;
   line-height: 1.4;
@@ -113,15 +113,15 @@
   }
 
   .brandIcon {
-    width: 52px;
-    height: 52px;
+    width: 40px;
+    height: 40px;
   }
 
   .logo {
-    font-size: 3rem;
+    font-size: 2.25rem;
   }
 
   .tagline {
-    font-size: 1.375rem;
+    font-size: 1.125rem;
   }
 }

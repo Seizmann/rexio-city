@@ -551,7 +551,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
-  - **Icon WebP Compression & Integration**: Compressed `assets/rexio-city_icon.png` (1.1MB) to high-efficiency `icon.webp` (59KB, ~95% size reduction) and `favicon.ico`, configured `metadata.icons` in `layout.tsx`, and updated `TopBar` and `LandingAuth` UI headers to display the WebP brand icon.
+  - **Logo & Icon Proportion Adjustments**: Fine-tuned `TopBar` and `LandingAuth` CSS modules (`TopBar.module.css` and `LandingAuth.module.css`) to make the brand icon and "RexiO City" header text compact, clean, and perfectly proportioned.
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:
