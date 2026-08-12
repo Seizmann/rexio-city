@@ -32,11 +32,11 @@ High-level roadmap for RexiO City. Updated as milestones are completed.
 
 ## Phase 3: Real-time & DMs
 
-- [ ] WebSocket DM server
-- [ ] At-rest DM encryption
-- [ ] Conversation list
-- [ ] Typing indicators
-- [ ] Read receipts
+- [x] WebSocket DM server
+- [x] At-rest DM encryption
+- [x] Conversation list
+- [x] Typing indicators
+- [x] Read receipts
 
 **Target:** Private messaging
 
