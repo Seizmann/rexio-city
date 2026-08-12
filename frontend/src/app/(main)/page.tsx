@@ -133,7 +133,7 @@ export default function HomePage() {
 
         updateStatus('finishing');
 
-        const res = await api.post<Post>(API.POSTS, {
+        const res = await api.post<Post & { post?: Post }>(API.POSTS, {
           content,
           media_urls: mediaUrls,
           media_types: mediaTypes,
@@ -143,9 +143,12 @@ export default function HomePage() {
           throw new Error(res.error?.message || 'Failed to create post');
         }
 
+        // Safely unwrap raw post object whether backend returns { post: Post } or Post directly
+        const rawPost: Post = (res.data.post && typeof res.data.post === 'object') ? res.data.post : res.data;
+
         const confirmedPost: Post = {
-          ...res.data,
-          user: res.data.user?.username ? res.data.user : resolvedUser,
+          ...rawPost,
+          user: rawPost.user?.username ? rawPost.user : resolvedUser,
         };
 
         localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
