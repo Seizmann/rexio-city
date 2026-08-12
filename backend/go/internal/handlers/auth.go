@@ -129,12 +129,15 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Send new-device email alert asynchronously — don't block the response
 	if result.IsNewDevice && result.User.Email != nil {
+		// Capture values before goroutine — Fiber reuses context across connections
+		userAgent := c.Get("User-Agent")
+		ipAddr := c.IP()
 		go func() {
 			if err := h.emailService.SendNewDeviceAlert(
 				*result.User.Email,
 				result.User.Username,
-				c.Get("User-Agent"),
-				c.IP(),
+				userAgent,
+				ipAddr,
 				time.Now(),
 			); err != nil {
 				log.Printf("[auth] new-device email failed for user %d: %v", result.User.ID, err)
@@ -182,6 +185,9 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 
 	// Set the new (rotated) refresh token cookie
 	setRefreshCookie(c, newRawToken, cfg)
+
+	// Issue new CSRF cookie on session rotation
+	middleware.IssueCSRFCookie(c, cfg.CSRFSecret, cfg.CookieSecure, cfg.CookieDomain)
 
 	return c.JSON(fiber.Map{
 		"success": true,

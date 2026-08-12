@@ -136,6 +136,13 @@ func CSRF(csrfSecret string) fiber.Handler {
 			return c.Next()
 		}
 
+		// Authorization header (Bearer token) is inherently immune to CSRF because
+		// cross-origin browsers cannot attach custom Authorization headers automatically.
+		authHeader := c.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			return c.Next()
+		}
+
 		cookieVal := c.Cookies(csrfCookieName)
 		headerVal := c.Get(csrfHeaderName)
 
