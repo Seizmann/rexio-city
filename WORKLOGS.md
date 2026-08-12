@@ -1,4 +1,4 @@
-## [2026-08-12 15:50, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+## [2026-08-12 15:55, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
 ### Picking up:
 - Repo: empty GitHub repo cloned from git@github.com:Seizmann/rexio-city.git
 ### Plan for this session:
@@ -16,6 +16,7 @@
   - `LICENSE` (AGPL-3.0 full text)
   - `.gitignore` (Python, Node, env files, secrets protected)
   - `WORKLOGS.md` (session log)
+  - `Private-Info.md` (blank template for secrets — gitignored)
 - Initialized git, created `dev` branch
 - Committed 6 files in single clean commit
 - Cleaned git history (removed intermediate commits)
@@ -28,7 +29,8 @@
 - CI/CD workflow not created yet
 
 ### Notes for next agent:
-- Repo is on `dev` branch with 2 clean commits
+- Repo is on `dev` branch with clean commit history
+- `Private-Info.md` is gitignored — secrets go there, never commit it
 - Next step: scaffold monorepo structure per PRD Section 2
 - Must create: frontend/, admin/, backend/go/, docker/ directories
 - .gitignore must stay in place — never commit secrets!
