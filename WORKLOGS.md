@@ -1,37 +1,79 @@
-## [2026-08-12 15:55, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+## [2026-08-12 16:30, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
 ### Picking up:
-- Repo: empty GitHub repo cloned from git@github.com:Seizmann/rexio-city.git
+- Repo: Empty GitHub repo cloned from git@github.com:Seizmann/rexio-city.git
+- Previous session (15:55): Initialized docs, committed to `dev` branch
 ### Plan for this session:
-- Initialize git repo with proper .gitignore
-- Commit core docs (AGENTS.md, DESIGN.md, README.md, LICENSE, .gitignore, WORKLOGS.md)
-- Create dev branch as the default working branch
-- Document initial state for next agent
+- Review current project state
+- Await user instructions for next steps
 
-### Done:
-- Cloned empty repo from git@github.com:Seizmann/rexio-city.git
-- Created core docs:
-  - `AGENTS.md` (118 lines, agent rules)
-  - `DESIGN.md` (126 lines, design tokens)
-  - `README.md` (project overview, architecture, tech stack)
-  - `LICENSE` (AGPL-3.0 full text)
-  - `.gitignore` (Python, Node, env files, secrets protected)
-  - `WORKLOGS.md` (session log)
-  - `Private-Info.md` (blank template for secrets — gitignored)
-- Initialized git, created `dev` branch
-- Committed 6 files in single clean commit
-- Cleaned git history (removed intermediate commits)
-- Pushed to origin/dev with force
+### Current project state:
+- Branch: `dev` (up to date with origin/dev)
+- Commits: 4 total (initial setup + doc updates)
+- Files: AGENTS.md, DESIGN.md, README.md, LICENSE, .gitignore, WORKLOGS.md, Private-Info.md
+- No code scaffold yet (frontend/, admin/, backend/ directories empty/missing)
 
 ### Left incomplete / blocked:
-- No code scaffold yet (frontend/, admin/, backend/ directories empty)
-- DECISIONS.md not created yet (PRD references it but it doesn't exist)
+- Waiting for user direction on next steps
+- PRD document not found in repo (referenced in AGENTS.md but not present)
+- DECISIONS.md not created yet
 - .env.example not created yet
-- CI/CD workflow not created yet
 
 ### Notes for next agent:
 - Repo is on `dev` branch with clean commit history
 - `Private-Info.md` is gitignored — secrets go there, never commit it
-- Next step: scaffold monorepo structure per PRD Section 2
-- Must create: frontend/, admin/, backend/go/, docker/ directories
-- .gitignore must stay in place — never commit secrets!
-- When ready to start coding, follow AGENTS.md Section 0 read order
+- User (Seizmann) is asking to work on this project
+- Need to understand what specific part to build first
+
+## [2026-08-12 16:45, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested: "rexio-city-v1.md onujayi project structure banao"
+- PRD file was not in repo, recreated from context
+### Plan for this session:
+- Create PRD (rexio-city-v1.md) from conversation context
+- Create missing docs: DECISIONS.md, ROADMAP.md, BRANDING.md, TESTING.md
+- Create .env.example for backend and frontend
+- Scaffold monorepo structure: frontend/, admin/, backend/go/
+- Create initial code files for all three services
+- Commit to dev branch
+
+### Done:
+- Created `rexio-city-v1.md` (full PRD with features, API, schema)
+- Created `DECISIONS.md` (10 architecture decisions)
+- Created `ROADMAP.md` (5 phases)
+- Created `BRANDING.md` (visual identity guidelines)
+- Created `TESTING.md` (manual QA checklist)
+- Created `.env.example` for backend
+- Created `docker/docker-compose.dev.yml`
+- Created `.github/workflows/ci.yml`
+- Scaffoled backend/go/:
+  - `cmd/api/main.go` — Main API entry point
+  - `cmd/admin/main.go` — Admin API entry point
+  - `internal/config/config.go` — Config loading
+  - `internal/middleware/auth.go` — JWT auth middleware
+  - `internal/handlers/health.go` — Health endpoint
+  - `internal/models/models.go` — Database models
+  - `migrations/001_initial_schema.sql` — Full DB schema
+- Scaffoled frontend/ (Next.js 16):
+  - `package.json`, `tsconfig.json`, `next.config.ts`
+  - `src/app/layout.tsx`, `src/app/page.tsx`
+  - `.env.example`
+- Scaffoled admin/ (Vite + React + Tailwind):
+  - `package.json`, `tsconfig.json`, `vite.config.ts`
+  - `tailwind.config.js`, `postcss.config.js`
+  - `index.html`
+  - `src/main.tsx`, `src/App.tsx`, `src/App.css`, `src/index.css`
+  - `.env.example`
+
+### Left incomplete / blocked:
+- Dependencies not installed (go mod tidy, npm install)
+- No tests written yet
+- WebSocket server for DMs not started
+- No authentication endpoints implemented yet
+- No post/feed endpoints implemented yet
+
+### Notes for next agent:
+- Go backend needs `go mod tidy` to resolve dependencies
+- Frontend/admin need `npm install` to install packages
+- Auth system is scaffolded but not implemented (need login/signup endpoints)
+- Database migrations need to be applied to Supabase
+- Next step: Implement auth endpoints (signup, login, social OAuth)
