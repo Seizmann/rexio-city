@@ -17,16 +17,22 @@ func NewFeedService() *FeedService {
 
 // FeedPost contains post data with engagement info
 type FeedPost struct {
-	ID         uint          `json:"id"`
-	UserID     uint          `json:"user_id"`
-	Content    string        `json:"content"`
-	CreatedAt  time.Time     `json:"created_at"`
-	User       models.User   `json:"user"`
-	Likes      int           `json:"likes"`
-	Comments   int           `json:"comments"`
-	Reposts    int           `json:"reposts"`
-	IsLiked    bool          `json:"is_liked"`
-	IsReposted bool          `json:"is_reposted"`
+	ID            uint        `json:"id"`
+	UserID        uint        `json:"user_id"`
+	Content       string      `json:"content"`
+	CreatedAt     time.Time   `json:"created_at"`
+	User          models.User `json:"user"`
+	Likes         int         `json:"likes"`
+	LikeCount     int         `json:"like_count"`
+	Comments      int         `json:"comments"`
+	CommentCount  int         `json:"comment_count"`
+	Reposts       int         `json:"reposts"`
+	RepostCount   int         `json:"repost_count"`
+	Bookmarks     int         `json:"bookmarks"`
+	BookmarkCount int         `json:"bookmark_count"`
+	IsLiked       bool        `json:"is_liked"`
+	IsReposted    bool        `json:"is_reposted"`
+	IsBookmarked  bool        `json:"is_bookmarked"`
 }
 
 // ListFeedInput contains feed request parameters
@@ -91,14 +97,22 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 		var likeCount int64
 		db.GetDB().Model(&models.Like{}).Where("post_id = ?", post.ID).Count(&likeCount)
 		feedPost.Likes = int(likeCount)
+		feedPost.LikeCount = int(likeCount)
 
 		var commentCount int64
 		db.GetDB().Model(&models.Comment{}).Where("post_id = ?", post.ID).Count(&commentCount)
 		feedPost.Comments = int(commentCount)
+		feedPost.CommentCount = int(commentCount)
 
 		var repostCount int64
 		db.GetDB().Model(&models.Repost{}).Where("post_id = ?", post.ID).Count(&repostCount)
 		feedPost.Reposts = int(repostCount)
+		feedPost.RepostCount = int(repostCount)
+
+		var bookmarkCount int64
+		db.GetDB().Model(&models.Bookmark{}).Where("post_id = ?", post.ID).Count(&bookmarkCount)
+		feedPost.Bookmarks = int(bookmarkCount)
+		feedPost.BookmarkCount = int(bookmarkCount)
 
 		// Check engagement status
 		if input.UserID > 0 {
@@ -109,15 +123,19 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 			var repost models.Repost
 			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
 			feedPost.IsReposted = repost.ID > 0
+
+			var bookmark models.Bookmark
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
+			feedPost.IsBookmarked = bookmark.ID > 0
 		}
 
 		feedPosts = append(feedPosts, feedPost)
 	}
 
 	return &ListFeedOutput{
-		Posts: feedPosts,
-		Page: input.Page,
+		Posts:   feedPosts,
+		Page:    input.Page,
 		PerPage: input.PerPage,
-		Total: int(total),
+		Total:   int(total),
 	}, nil
 }

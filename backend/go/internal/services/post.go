@@ -55,10 +55,10 @@ type ListPostsInput struct {
 
 // ListPostsOutput contains posts with pagination meta
 type ListPostsOutput struct {
-	Posts   []models.Post `json:"posts"`
-	Page    int           `json:"page"`
-	PerPage int           `json:"per_page"`
-	Total   int           `json:"total"`
+	Posts   []FeedPost `json:"posts"`
+	Page    int        `json:"page"`
+	PerPage int        `json:"per_page"`
+	Total   int        `json:"total"`
 }
 
 // CreatePost creates a new post
@@ -145,7 +145,7 @@ func (s *PostService) GetPost(input GetPostInput) (*GetPostOutput, error) {
 	}, nil
 }
 
-// ListPosts retrieves a list of posts with pagination (respects user_id filter)
+// ListPosts retrieves a list of posts with engagement counts and pagination
 func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) {
 	if input.Page < 1 {
 		input.Page = 1
@@ -170,8 +170,55 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 		Limit(input.PerPage).
 		Find(&posts)
 
+	feedPosts := make([]FeedPost, 0, len(posts))
+	for _, post := range posts {
+		feedPost := FeedPost{
+			ID:        post.ID,
+			UserID:    post.UserID,
+			Content:   post.Content,
+			CreatedAt: post.CreatedAt,
+			User:      post.User,
+		}
+
+		var likeCount int64
+		db.GetDB().Model(&models.Like{}).Where("post_id = ?", post.ID).Count(&likeCount)
+		feedPost.Likes = int(likeCount)
+		feedPost.LikeCount = int(likeCount)
+
+		var commentCount int64
+		db.GetDB().Model(&models.Comment{}).Where("post_id = ?", post.ID).Count(&commentCount)
+		feedPost.Comments = int(commentCount)
+		feedPost.CommentCount = int(commentCount)
+
+		var repostCount int64
+		db.GetDB().Model(&models.Repost{}).Where("post_id = ?", post.ID).Count(&repostCount)
+		feedPost.Reposts = int(repostCount)
+		feedPost.RepostCount = int(repostCount)
+
+		var bookmarkCount int64
+		db.GetDB().Model(&models.Bookmark{}).Where("post_id = ?", post.ID).Count(&bookmarkCount)
+		feedPost.Bookmarks = int(bookmarkCount)
+		feedPost.BookmarkCount = int(bookmarkCount)
+
+		if input.UserID > 0 {
+			var like models.Like
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
+			feedPost.IsLiked = like.ID > 0
+
+			var repost models.Repost
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
+			feedPost.IsReposted = repost.ID > 0
+
+			var bookmark models.Bookmark
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
+			feedPost.IsBookmarked = bookmark.ID > 0
+		}
+
+		feedPosts = append(feedPosts, feedPost)
+	}
+
 	return &ListPostsOutput{
-		Posts:   posts,
+		Posts:   feedPosts,
 		Page:    input.Page,
 		PerPage: input.PerPage,
 		Total:   int(total),
