@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -51,9 +50,9 @@ func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 	}
 
 	result, err := h.postService.CreatePost(services.CreatePostInput{
-		UserID: userID,
-		Content: input.Content,
-		MediaURLs: input.MediaURLs,
+		UserID:     userID,
+		Content:    input.Content,
+		MediaURLs:  input.MediaURLs,
 		MediaTypes: input.MediaTypes,
 	})
 	if err != nil {
@@ -65,35 +64,32 @@ func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
-// GetPost handles GET /api/posts/:id
+// GetPost handles GET /api/posts/:id (accepts public_id string or numeric ID)
 func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 	postID := c.Params("id")
-	userID := c.Locals("user_id").(uint)
-
-	var input services.GetPostInput
-	if _, err := fmt.Sscanf(postID, "%d", &input.PostID); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
+	var userID uint
+	if u, ok := c.Locals("user_id").(uint); ok {
+		userID = u
 	}
-	input.UserID = userID
 
-	result, err := h.postService.GetPost(input)
+	result, err := h.postService.GetPost(services.GetPostInput{
+		Identifier: postID,
+		UserID:     userID,
+	})
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
+			"error":   fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
@@ -113,17 +109,17 @@ func (h *PostHandler) ListPosts(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result.Posts,
+		"data":    result.Posts,
 		"meta": fiber.Map{
-			"page": page,
+			"page":     page,
 			"per_page": perPage,
-			"total": result.Total,
+			"total":    result.Total,
 		},
 	})
 }
@@ -133,15 +129,7 @@ func (h *PostHandler) DeletePost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	err := h.postService.DeletePost(input, userID)
+	err := h.postService.DeletePost(postID, userID)
 	if err != nil {
 		statusCode := fiber.StatusBadRequest
 		if err.Error() == "permission denied" {
@@ -149,13 +137,13 @@ func (h *PostHandler) DeletePost(c *fiber.Ctx) error {
 		}
 		return c.Status(statusCode).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Post deleted"},
+		"data":    fiber.Map{"message": "Post deleted"},
 	})
 }
 
@@ -164,31 +152,23 @@ func (h *PostHandler) LikePost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	err := h.postService.LikePost(input, userID)
+	err := h.postService.LikePost(postID, userID)
 	if err != nil {
 		if err.Error() == "already liked" {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"success": false,
-				"error": fiber.Map{"code": "CONFLICT", "message": err.Error()},
+				"error":   fiber.Map{"code": "CONFLICT", "message": err.Error()},
 			})
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Post liked"},
+		"data":    fiber.Map{"message": "Post liked"},
 	})
 }
 
@@ -197,25 +177,17 @@ func (h *PostHandler) UnlikePost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	err := h.postService.UnlikePost(input, userID)
+	err := h.postService.UnlikePost(postID, userID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Post unliked"},
+		"data":    fiber.Map{"message": "Post unliked"},
 	})
 }
 
@@ -224,33 +196,25 @@ func (h *PostHandler) CommentOnPost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
 	var req CommentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
-	result, err := h.postService.CommentOnPost(input, userID, req.Content, req.ParentID)
+	result, err := h.postService.CommentOnPost(postID, userID, req.Content, req.ParentID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
@@ -258,25 +222,17 @@ func (h *PostHandler) CommentOnPost(c *fiber.Ctx) error {
 func (h *PostHandler) GetPostComments(c *fiber.Ctx) error {
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	result, err := h.postService.GetPostComments(input)
+	result, err := h.postService.GetPostComments(postID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
@@ -285,66 +241,50 @@ func (h *PostHandler) RepostPost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
 	var req RepostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
-	result, err := h.postService.RepostPost(input, userID, req.Comment)
+	result, err := h.postService.RepostPost(postID, userID, req.Comment)
 	if err != nil {
 		if err.Error() == "already reposted" {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"success": false,
-				"error": fiber.Map{"code": "CONFLICT", "message": err.Error()},
+				"error":   fiber.Map{"code": "CONFLICT", "message": err.Error()},
 			})
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
-// UnrepostPost handles DELETE /api/posts/:id/repost
+// UnrepostPost removes a repost
 func (h *PostHandler) UnrepostPost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	err := h.postService.UnrepostPost(input, userID)
+	err := h.postService.UnrepostPost(postID, userID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Post unreposted"},
+		"data":    fiber.Map{"message": "Post unreposted"},
 	})
 }
 
@@ -353,57 +293,41 @@ func (h *PostHandler) BookmarkPost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	err := h.postService.BookmarkPost(input, userID)
+	err := h.postService.BookmarkPost(postID, userID)
 	if err != nil {
 		if err.Error() == "already bookmarked" {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"success": false,
-				"error": fiber.Map{"code": "CONFLICT", "message": err.Error()},
+				"error":   fiber.Map{"code": "CONFLICT", "message": err.Error()},
 			})
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Post bookmarked"},
+		"data":    fiber.Map{"message": "Post bookmarked"},
 	})
 }
 
-// UnbookmarkPost handles DELETE /api/posts/:id/bookmark
+// UnbookmarkPost removes a bookmark
 func (h *PostHandler) UnbookmarkPost(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	postID := c.Params("id")
 
-	var input uint
-	if _, err := fmt.Sscanf(postID, "%d", &input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid post ID"},
-		})
-	}
-
-	err := h.postService.UnbookmarkPost(input, userID)
+	err := h.postService.UnbookmarkPost(postID, userID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Post unbookmarked"},
+		"data":    fiber.Map{"message": "Post unbookmarked"},
 	})
 }

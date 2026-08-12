@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
@@ -31,8 +32,8 @@ type CreatePostOutput struct {
 
 // GetPostInput contains parameters for getting a single post
 type GetPostInput struct {
-	PostID uint
-	UserID uint // For checking ownership
+	Identifier string // Can be 16-char public_id or numeric ID string
+	UserID     uint   // For checking ownership
 }
 
 // GetPostOutput contains post with engagement counts
@@ -61,7 +62,26 @@ type ListPostsOutput struct {
 	Total   int        `json:"total"`
 }
 
-// CreatePost creates a new post
+// FindPostByIdentifier retrieves a post by its 16-char public_id or numeric ID
+func (s *PostService) FindPostByIdentifier(identifier string) (*models.Post, error) {
+	var post models.Post
+	numID, err := strconv.ParseUint(identifier, 10, 64)
+	if err == nil {
+		res := db.GetDB().Preload("User").Where("id = ? AND deleted_at IS NULL", uint(numID)).First(&post)
+		if res.Error == nil {
+			return &post, nil
+		}
+	}
+
+	res := db.GetDB().Preload("User").Where("public_id = ? AND deleted_at IS NULL", identifier).First(&post)
+	if res.Error != nil {
+		return nil, fmt.Errorf("post not found")
+	}
+
+	return &post, nil
+}
+
+// CreatePost creates a new post with a 16-character random public_id
 func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, error) {
 	if len(input.Content) == 0 {
 		return nil, fmt.Errorf("post content cannot be empty")
@@ -70,8 +90,11 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 		return nil, fmt.Errorf("post content cannot exceed 500 characters")
 	}
 
+	publicID := GenerateRandomPublicID(16)
+
 	// Create post
 	post := models.Post{
+		PublicID:  publicID,
 		UserID:    input.UserID,
 		Content:   input.Content,
 		CreatedAt: time.Now(),
@@ -105,23 +128,27 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 	return &CreatePostOutput{Post: post}, nil
 }
 
-// GetPost retrieves a single post by ID
+// GetPost retrieves a single post by public_id or numeric ID
 func (s *PostService) GetPost(input GetPostInput) (*GetPostOutput, error) {
-	var post models.Post
-	result := db.GetDB().Preload("User").First(&post, input.PostID)
-	if result.Error != nil {
-		return nil, fmt.Errorf("post not found")
+	post, err := s.FindPostByIdentifier(input.Identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	if post.PublicID == "" {
+		post.PublicID = GenerateRandomPublicID(16)
+		db.GetDB().Model(&models.Post{}).Where("id = ?", post.ID).Update("public_id", post.PublicID)
 	}
 
 	// Get engagement counts
 	var likeCount int64
-	db.GetDB().Model(&models.Like{}).Where("post_id = ?", input.PostID).Count(&likeCount)
+	db.GetDB().Model(&models.Like{}).Where("post_id = ?", post.ID).Count(&likeCount)
 
 	var commentCount int64
-	db.GetDB().Model(&models.Comment{}).Where("post_id = ?", input.PostID).Count(&commentCount)
+	db.GetDB().Model(&models.Comment{}).Where("post_id = ?", post.ID).Count(&commentCount)
 
 	var repostCount int64
-	db.GetDB().Model(&models.Repost{}).Where("post_id = ?", input.PostID).Count(&repostCount)
+	db.GetDB().Model(&models.Repost{}).Where("post_id = ?", post.ID).Count(&repostCount)
 
 	// Check engagement status
 	isLiked := false
@@ -129,13 +156,13 @@ func (s *PostService) GetPost(input GetPostInput) (*GetPostOutput, error) {
 	isBookmarked := false
 
 	if input.UserID > 0 {
-		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, input.PostID).First(&models.Like{}).Scan(&isLiked)
-		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, input.PostID).First(&models.Repost{}).Scan(&isReposted)
-		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, input.PostID).First(&models.Bookmark{}).Scan(&isBookmarked)
+		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&models.Like{}).Scan(&isLiked)
+		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&models.Repost{}).Scan(&isReposted)
+		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&models.Bookmark{}).Scan(&isBookmarked)
 	}
 
 	return &GetPostOutput{
-		Post:         post,
+		Post:         *post,
 		Likes:        int(likeCount),
 		Comments:     int(commentCount),
 		Reposts:      int(repostCount),
@@ -172,8 +199,14 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 
 	feedPosts := make([]FeedPost, 0, len(posts))
 	for _, post := range posts {
+		if post.PublicID == "" {
+			post.PublicID = GenerateRandomPublicID(16)
+			db.GetDB().Model(&models.Post{}).Where("id = ?", post.ID).Update("public_id", post.PublicID)
+		}
+
 		feedPost := FeedPost{
 			ID:        post.ID,
+			PublicID:  post.PublicID,
 			UserID:    post.UserID,
 			Content:   post.Content,
 			CreatedAt: post.CreatedAt,
@@ -226,11 +259,10 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 }
 
 // DeletePost soft deletes a post
-func (s *PostService) DeletePost(postID uint, userID uint) error {
-	var post models.Post
-	result := db.GetDB().First(&post, postID)
-	if result.Error != nil {
-		return fmt.Errorf("post not found")
+func (s *PostService) DeletePost(identifier string, userID uint) error {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return err
 	}
 
 	// Check ownership
@@ -240,23 +272,28 @@ func (s *PostService) DeletePost(postID uint, userID uint) error {
 
 	// Soft delete
 	now := time.Now()
-	db.GetDB().Model(&post).Update("deleted_at", &now)
+	db.GetDB().Model(post).Update("deleted_at", &now)
 
 	return nil
 }
 
 // LikePost adds a like to a post
-func (s *PostService) LikePost(postID uint, userID uint) error {
+func (s *PostService) LikePost(identifier string, userID uint) error {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return err
+	}
+
 	// Check if already liked
 	var existing models.Like
-	db.GetDB().Where("user_id = ? AND post_id = ?", userID, postID).First(&existing)
+	db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
 	if existing.ID > 0 {
 		return fmt.Errorf("already liked")
 	}
 
 	like := models.Like{
 		UserID:    userID,
-		PostID:    postID,
+		PostID:    post.ID,
 		CreatedAt: time.Now(),
 	}
 
@@ -264,8 +301,13 @@ func (s *PostService) LikePost(postID uint, userID uint) error {
 }
 
 // UnlikePost removes a like from a post
-func (s *PostService) UnlikePost(postID uint, userID uint) error {
-	result := db.GetDB().Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Like{})
+func (s *PostService) UnlikePost(identifier string, userID uint) error {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return err
+	}
+
+	result := db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).Delete(&models.Like{})
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("like not found")
 	}
@@ -273,7 +315,12 @@ func (s *PostService) UnlikePost(postID uint, userID uint) error {
 }
 
 // CommentOnPost adds a comment to a post and preloads author User relation
-func (s *PostService) CommentOnPost(postID uint, userID uint, content string, parentID *uint) (*models.Comment, error) {
+func (s *PostService) CommentOnPost(identifier string, userID uint, content string, parentID *uint) (*models.Comment, error) {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(content) == 0 {
 		return nil, fmt.Errorf("comment content cannot be empty")
 	}
@@ -283,7 +330,7 @@ func (s *PostService) CommentOnPost(postID uint, userID uint, content string, pa
 
 	comment := models.Comment{
 		UserID:    userID,
-		PostID:    postID,
+		PostID:    post.ID,
 		Content:   content,
 		ParentID:  parentID,
 		CreatedAt: time.Now(),
@@ -300,28 +347,38 @@ func (s *PostService) CommentOnPost(postID uint, userID uint, content string, pa
 	return &comment, nil
 }
 
-// GetPostComments retrieves comments for a post with preloaded author User relation
-func (s *PostService) GetPostComments(postID uint) ([]models.Comment, error) {
+// GetPostComments retrieves comments for a post by identifier
+func (s *PostService) GetPostComments(identifier string) ([]models.Comment, error) {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return nil, err
+	}
+
 	var comments []models.Comment
 	db.GetDB().Preload("User").
-		Where("post_id = ?", postID).
+		Where("post_id = ?", post.ID).
 		Order("created_at ASC").
 		Find(&comments)
 	return comments, nil
 }
 
 // RepostPost creates a repost
-func (s *PostService) RepostPost(postID uint, userID uint, comment *string) (*models.Repost, error) {
+func (s *PostService) RepostPost(identifier string, userID uint, comment *string) (*models.Repost, error) {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if already reposted
 	var existing models.Repost
-	db.GetDB().Where("user_id = ? AND post_id = ?", userID, postID).First(&existing)
+	db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
 	if existing.ID > 0 {
 		return nil, fmt.Errorf("already reposted")
 	}
 
 	repost := models.Repost{
 		UserID:    userID,
-		PostID:    postID,
+		PostID:    post.ID,
 		Comment:   comment,
 		CreatedAt: time.Now(),
 	}
@@ -334,8 +391,13 @@ func (s *PostService) RepostPost(postID uint, userID uint, comment *string) (*mo
 }
 
 // UnrepostPost removes a repost
-func (s *PostService) UnrepostPost(postID uint, userID uint) error {
-	result := db.GetDB().Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Repost{})
+func (s *PostService) UnrepostPost(identifier string, userID uint) error {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return err
+	}
+
+	result := db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).Delete(&models.Repost{})
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("repost not found")
 	}
@@ -343,17 +405,22 @@ func (s *PostService) UnrepostPost(postID uint, userID uint) error {
 }
 
 // BookmarkPost saves a post
-func (s *PostService) BookmarkPost(postID uint, userID uint) error {
+func (s *PostService) BookmarkPost(identifier string, userID uint) error {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return err
+	}
+
 	// Check if already bookmarked
 	var existing models.Bookmark
-	db.GetDB().Where("user_id = ? AND post_id = ?", userID, postID).First(&existing)
+	db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
 	if existing.ID > 0 {
 		return fmt.Errorf("already bookmarked")
 	}
 
 	bookmark := models.Bookmark{
 		UserID:    userID,
-		PostID:    postID,
+		PostID:    post.ID,
 		CreatedAt: time.Now(),
 	}
 
@@ -361,8 +428,13 @@ func (s *PostService) BookmarkPost(postID uint, userID uint) error {
 }
 
 // UnbookmarkPost removes a bookmark
-func (s *PostService) UnbookmarkPost(postID uint, userID uint) error {
-	result := db.GetDB().Where("user_id = ? AND post_id = ?", userID, postID).Delete(&models.Bookmark{})
+func (s *PostService) UnbookmarkPost(identifier string, userID uint) error {
+	post, err := s.FindPostByIdentifier(identifier)
+	if err != nil {
+		return err
+	}
+
+	result := db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).Delete(&models.Bookmark{})
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("bookmark not found")
 	}

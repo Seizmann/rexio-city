@@ -1,11 +1,27 @@
 package services
 
 import (
+	"crypto/rand"
 	"time"
 
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
 	"github.com/seizmann/rexio-city/backend/go/internal/models"
 )
+
+const publicIDChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+// GenerateRandomPublicID generates a cryptographically random 16+ character public identifier
+func GenerateRandomPublicID(length int) string {
+	if length < 16 {
+		length = 16
+	}
+	b := make([]byte, length)
+	_, _ = rand.Read(b)
+	for i := 0; i < length; i++ {
+		b[i] = publicIDChars[int(b[i])%len(publicIDChars)]
+	}
+	return string(b)
+}
 
 // FeedService handles feed-related operations
 type FeedService struct{}
@@ -18,6 +34,7 @@ func NewFeedService() *FeedService {
 // FeedPost contains post data with engagement info
 type FeedPost struct {
 	ID            uint        `json:"id"`
+	PublicID      string      `json:"public_id"`
 	UserID        uint        `json:"user_id"`
 	Content       string      `json:"content"`
 	CreatedAt     time.Time   `json:"created_at"`
@@ -85,8 +102,14 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 	// Build feed posts with engagement info
 	feedPosts := make([]FeedPost, 0, len(posts))
 	for _, post := range posts {
+		if post.PublicID == "" {
+			post.PublicID = GenerateRandomPublicID(16)
+			db.GetDB().Model(&models.Post{}).Where("id = ?", post.ID).Update("public_id", post.PublicID)
+		}
+
 		feedPost := FeedPost{
 			ID:        post.ID,
+			PublicID:  post.PublicID,
 			UserID:    post.UserID,
 			Content:   post.Content,
 			CreatedAt: post.CreatedAt,

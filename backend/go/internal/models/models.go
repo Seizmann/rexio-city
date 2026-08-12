@@ -17,9 +17,10 @@ type User struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-// Post represents a social post
+// Post represents a social post with a 16-character random public_id
 type Post struct {
 	ID        uint       `json:"id" gorm:"primaryKey"`
+	PublicID  string     `json:"public_id" gorm:"uniqueIndex;size:32"`
 	UserID    uint       `json:"user_id"`
 	Content   string     `json:"content" gorm:"size:500"`
 	CreatedAt time.Time  `json:"created_at"`
