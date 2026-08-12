@@ -1,8 +1,10 @@
 package services
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/argon2"
@@ -16,10 +18,10 @@ import (
 
 const (
 	// Argon2 parameters
-	saltLength = 16
-	keyLength  = 32
-	timeCost   = 3
-	memoryCost = 64 * 1024 // 64 MB
+	saltLength  = 16
+	keyLength   = 32
+	timeCost    = 3
+	memoryCost  = 64 * 1024 // 64 MB
 	parallelism = 1
 )
 
@@ -49,7 +51,7 @@ type SignupOutput struct {
 
 // LoginInput contains login request data
 type LoginInput struct {
-	Email    string `json:"email"`
+	Email    string `json:"email"` // Accept either email or username
 	Password string `json:"password"`
 }
 
@@ -124,8 +126,11 @@ func VerifyPassword(password, hash string) bool {
 func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
 	cfg := config.Load()
 
+	cleanUsername := strings.TrimSpace(strings.ToLower(input.Username))
+	cleanEmail := strings.TrimSpace(strings.ToLower(input.Email))
+
 	// Validate username
-	if !isValidUsername(input.Username) {
+	if !isValidUsername(cleanUsername) {
 		return nil, errors.New("username must be 3-15 characters, lowercase letters, numbers, and underscores only")
 	}
 
@@ -136,14 +141,14 @@ func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
 
 	// Check if username exists
 	var existingUser models.User
-	result := db.GetDB().Where("username = ?", input.Username).First(&existingUser)
+	result := db.GetDB().Where("LOWER(username) = ?", cleanUsername).First(&existingUser)
 	if result.RowsAffected > 0 {
 		return nil, errors.New("username already taken")
 	}
 
 	// Check if email exists (if provided)
-	if input.Email != "" {
-		result = db.GetDB().Where("email = ?", input.Email).First(&existingUser)
+	if cleanEmail != "" {
+		result = db.GetDB().Where("LOWER(email) = ?", cleanEmail).First(&existingUser)
 		if result.RowsAffected > 0 {
 			return nil, errors.New("email already registered")
 		}
@@ -155,14 +160,19 @@ func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
+	displayName := strings.TrimSpace(input.DisplayName)
+	if displayName == "" {
+		displayName = cleanUsername
+	}
+
 	// Create user
 	user := models.User{
-		Username:    norm.NFC.String(input.Username),
-		DisplayName: &input.DisplayName,
-		Email:       &input.Email,
+		Username:     norm.NFC.String(cleanUsername),
+		DisplayName:  &displayName,
+		Email:        &cleanEmail,
 		PasswordHash: hashedPassword,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	result = db.GetDB().Create(&user)
@@ -189,14 +199,19 @@ func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
 	}, nil
 }
 
-// Login authenticates a user and returns JWT tokens
+// Login authenticates a user by email or username and returns JWT tokens
 func (s *AuthService) Login(input LoginInput) (*LoginOutput, error) {
 	cfg := config.Load()
 
-	// Find user by email
+	cleanIdentifier := strings.TrimSpace(strings.ToLower(input.Email))
+	if cleanIdentifier == "" {
+		return nil, errors.New("email or username is required")
+	}
+
+	// Find user by email or username (case-insensitive)
 	var user models.User
-	result := db.GetDB().Where("email = ?", input.Email).First(&user)
-	if result.RowsAffected == 0 {
+	result := db.GetDB().Where("LOWER(email) = ? OR LOWER(username) = ?", cleanIdentifier, cleanIdentifier).First(&user)
+	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, errors.New("invalid email or password")
 	}
 
@@ -272,10 +287,7 @@ func isValidUsername(username string) bool {
 
 func generateRandomBytes(n int) []byte {
 	b := make([]byte, n)
-	// In production, use crypto/rand
-	for i := range b {
-		b[i] = byte(i % 256)
-	}
+	_, _ = rand.Read(b)
 	return b
 }
 
