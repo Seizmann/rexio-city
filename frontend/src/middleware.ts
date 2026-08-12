@@ -1,40 +1,68 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// API proxy to forward requests to Go backend
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10888';
+/**
+ * Next.js middleware — proxies /api/* requests to the Go backend.
+ *
+ * Per AGENTS.md D1: "The frontend/ app never calls Supabase directly.
+ * All data access goes through Next.js API routes, which call the Go backend."
+ *
+ * This middleware acts as that bridge: the browser hits the Next.js origin,
+ * and the server forwards the request to the Go backend. No CORS needed
+ * since the browser sees same-origin requests.
+ *
+ * The Go backend URL is read from API_PROXY_URL (server-only, not NEXT_PUBLIC_).
+ * Falls back to NEXT_PUBLIC_API_URL for backwards compat, then localhost.
+ */
+const BACKEND_URL =
+  process.env.API_PROXY_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:10888';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // Skip if not an API path
+  const { pathname, search } = request.nextUrl;
+
+  // Only proxy /api/* paths
   if (!pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
   try {
-    // Forward the request to the Go backend
-    const response = await fetch(`${API_URL}${pathname}`, {
+    // Build the target URL on the Go backend
+    const targetUrl = `${BACKEND_URL}${pathname}${search}`;
+
+    // Forward relevant headers, but replace Host with the backend's host
+    const forwardHeaders = new Headers();
+    forwardHeaders.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader) {
+      forwardHeaders.set('Authorization', authHeader);
+    }
+
+    const response = await fetch(targetUrl, {
       method: request.method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...Object.fromEntries(request.headers),
-      },
-      body: request.body,
+      headers: forwardHeaders,
+      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
     });
 
-    // Return the response from backend
+    // Pass through the backend response without adding CORS headers.
+    // The browser sees this as same-origin; no Access-Control-Allow-Origin needed.
     return new NextResponse(response.body, {
       status: response.status,
       headers: {
         'Content-Type': response.headers.get('Content-Type') || 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Proxy error', message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 502 }
+      {
+        success: false,
+        error: {
+          code: 'PROXY_ERROR',
+          message: error instanceof Error ? error.message : 'Backend unreachable',
+        },
+      },
+      { status: 502 },
     );
   }
 }

@@ -90,8 +90,8 @@ Preview:    https://dev-city.rexio.pro
 Production: https://oppscity.rexio.pro
 
 # Backend (Cloudflare Tunnel)
-Dev:        https://devv-connect2city.spritexai.dpdns.org
-Production: https://connect2city.spritexai.dpdns.org
+Dev:         https://citydev.rexio.pro
+Production:  https://city-connect.rexio.pro
 
 # Media CDN
 All:        https://cdn-city.rexio.pro
@@ -249,7 +249,7 @@ All:        https://cdn-city.rexio.pro
 | Service | Environment | URL |
 |---|---|---|
 || Main API | Dev | `https://citydev.rexio.pro` |
-|| Main API | Production | `https://connect2city.spritexai.dpdns.org` |
+|| Main API | Production | `https://city-connect.rexio.pro` |
 | Media CDN | All | `https://cdn-city.rexio.pro` |
 
 ### Response Format

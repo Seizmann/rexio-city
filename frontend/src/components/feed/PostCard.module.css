@@ -1,0 +1,117 @@
+.card {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg);
+  display: flex;
+  gap: var(--space-3);
+  transition: background-color var(--transition-fast);
+}
+
+.card:hover {
+  background-color: var(--bg-secondary);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-secondary);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent);
+  color: var(--accent-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.authorRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.authorLink {
+  text-decoration: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.authorLink:hover .displayName {
+  text-decoration: underline;
+}
+
+.displayName {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.9375rem;
+}
+
+.username {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.timestamp {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-left: auto;
+}
+
+.body {
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin-bottom: var(--space-3);
+}
+
+.actionRow {
+  display: flex;
+  justify-content: space-between;
+  max-width: 400px;
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.actionButton:hover {
+  background-color: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+}
+
+.actionButton.active {
+  color: var(--accent);
+}
+
+.actionButton svg {
+  width: 18px;
+  height: 18px;
+}

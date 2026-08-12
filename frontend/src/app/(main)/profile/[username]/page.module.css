@@ -1,0 +1,41 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.loadingState, .errorState {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.errorState h2 {
+  color: var(--text);
+  margin-bottom: var(--space-2);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+}
+
+.emptyState {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.emptySub {
+  font-size: 15px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: var(--space-2);
+}
