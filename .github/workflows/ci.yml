@@ -11,6 +11,9 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/go
     steps:
       - uses: actions/checkout@v4
 
@@ -18,6 +21,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
+          cache: true
+          cache-dependency-path: backend/go/go.sum
 
       - name: Format check
         run: go fmt ./...
@@ -30,6 +35,9 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -41,16 +49,19 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: cd frontend && npm ci
+        run: npm ci
 
       - name: Lint
-        run: cd frontend && npm run lint
+        run: npm run lint
 
       - name: Type check
-        run: cd frontend && npx tsc --noEmit
+        run: npx tsc --noEmit
 
   admin:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
     steps:
       - uses: actions/checkout@v4
 
@@ -62,13 +73,13 @@ jobs:
           cache-dependency-path: admin/package-lock.json
 
       - name: Install dependencies
-        run: cd admin && npm ci
+        run: npm ci
 
       - name: Lint
-        run: cd admin && npm run lint
+        run: npm run lint
 
       - name: Type check
-        run: cd admin && npx tsc --noEmit
+        run: npx tsc --noEmit
 
   security:
     runs-on: ubuntu-latest

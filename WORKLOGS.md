@@ -77,3 +77,28 @@
 - Auth system is scaffolded but not implemented (need login/signup endpoints)
 - Database migrations need to be applied to Supabase
 - Next step: Implement auth endpoints (signup, login, social OAuth)
+
+## [2026-08-12 17:00, GMT+8] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested: "dependencis install koro"
+### Plan for this session:
+- Install Go dependencies (backend/go)
+- Install npm dependencies (frontend/, admin/)
+- Fix eslint version conflict in frontend
+- Commit and push
+
+### Done:
+- Backend: `go mod tidy` completed (Fiber, JWT, Redis, PostgreSQL drivers downloaded)
+- Frontend: `npm install` completed (Next.js 16, React 19, eslint 9, 345 packages)
+- Admin: `npm install` completed (Vite, React, Tailwind, 135 packages)
+- Fixed eslint version conflict (^8 → ^9) for eslint-config-next compatibility
+- Committed and pushed to origin/dev
+
+### Left incomplete / blocked:
+- None — all dependencies installed successfully
+- Next step: Implement auth endpoints
+
+### Notes for next agent:
+- Go is at `/usr/local/go/bin/go`
+- All dependencies installed, ready for development
+- Next step: implement signup/login endpoints in backend
