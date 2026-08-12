@@ -15,6 +15,7 @@ import { ROUTES } from '@/lib/constants';
 import TopBar from '@/components/layout/TopBar';
 import Sidebar from '@/components/layout/Sidebar';
 import BottomNav from '@/components/layout/BottomNav';
+import SplashScreen from '@/components/ui/SplashScreen';
 import styles from './main.module.css';
 
 export default function MainLayout({
@@ -35,13 +36,9 @@ export default function MainLayout({
     }
   }, [isLoading, isAuthenticated, isHomePage, router]);
 
-  // Show loading spinner while auth hydrates
+  // Show splash screen while auth hydrates (Twitter-style icon animation)
   if (isLoading) {
-    return (
-      <div className={styles.loadingScreen} suppressHydrationWarning>
-        <div className={styles.loadingSpinner} suppressHydrationWarning />
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   // If not authenticated and on home page (/), render page content directly (LandingAuth screen)

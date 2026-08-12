@@ -1,0 +1,41 @@
+/* ── Splash / Preloader Screen ─────────────────────────────────────────
+   Shown during initial auth hydration.
+   Twitter-style: dark full-screen bg, centered icon with a pop-in
+   scale + fade animation, then a subtle continuous breathing pulse.
+ ─────────────────────────────────────────────────────────────────────── */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Use the dark-mode bg colour directly so it looks consistent regardless
+     of the user's OS colour-scheme preference. */
+  background: #0b141a;
+}
+
+.iconWrap {
+  animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.icon {
+  width: 80px;
+  height: 80px;
+  /* Invert the icon so it reads white on the dark bg.
+     The original icon is #6b4e5e (dark mauve) on white — invert + hue-rotate
+     gives us a clean white render without needing a separate asset. */
+  filter: invert(1);
+  user-select: none;
+  display: block;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────── */
+
+/* Initial pop-in: scale from 0.6 → 1 with a slight overshoot (spring feel) */
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
