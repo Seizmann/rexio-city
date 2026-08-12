@@ -41,6 +41,12 @@ export interface Post {
   is_reposted?: boolean;
   is_bookmarked?: boolean;
   created_at: string;
+  // Optimistic upload fields — only present on pending posts in the feed.
+  // Cleared once the real post is confirmed from the server.
+  _pending?: true;
+  _uploadStatus?: 'uploading' | 'updating' | 'finishing' | 'done' | 'error';
+  _localPreviews?: { previewUrl: string; type: 'photo' | 'video' }[];
+  _pendingKey?: string; // unique key to identify this pending post
 }
 
 export interface PostMedia {

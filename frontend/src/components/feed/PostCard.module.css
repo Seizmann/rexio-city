@@ -12,6 +12,85 @@
   background-color: var(--bg-secondary);
 }
 
+/* Pending (uploading) post — slightly dimmed, no hover effect */
+.cardPending {
+  opacity: 0.85;
+  cursor: default;
+  pointer-events: none; /* children re-enable what they need */
+}
+
+.cardPending:hover {
+  background-color: var(--bg);
+}
+
+/* Upload status banner — sits full-width at top of the card content, above avatar */
+.uploadBanner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px var(--space-4);
+  background: rgba(107, 78, 94, 0.08);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--accent);
+  font-weight: 500;
+  /* Banner spans the full card width incl. the avatar column */
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-3);
+  width: calc(100% + var(--space-4) * 2);
+}
+
+/* Pulsing animated dot */
+.uploadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+.uploadLabel {
+  letter-spacing: 0.01em;
+}
+
+/* Media overlay — frosted shimmer over local preview while uploading */
+.mediaUploadOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+  background-size: 200% 200%;
+  animation: shimmer 1.6s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+
+/* Slightly desaturated/blurred local preview images while uploading */
+.mediaImagePending {
+  filter: brightness(0.85) saturate(0.7);
+}
+
+/* Disabled action row while pending */
+.actionRowDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 .avatar {
   width: 40px;
   height: 40px;

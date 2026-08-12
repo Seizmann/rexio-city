@@ -3,33 +3,32 @@
 import React, { useState, useRef } from 'react';
 import styles from './PostComposer.module.css';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
-import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
 import Button from '@/components/ui/Button';
 
 interface PostComposerProps {
-  onPostCreated: (post: Post) => void;
+  onPostSubmit: (payload: {
+    content: string;
+    files: { file: File; type: 'photo' | 'video' }[];
+    pendingKey: string;
+  }) => void;
 }
 
-interface AttachedMediaItem {
-  id: string;
-  url: string;
-  type: 'photo' | 'video' | 'voice';
+// Local preview — no upload happens here, file stays in browser memory
+interface LocalAttachment {
+  file: File;
+  type: 'photo' | 'video';
   previewUrl: string;
-  isUploading: boolean;
-  error?: string;
 }
 
 const MAX_CHARS = 500;
 const MAX_PHOTOS = 10;
 
-export default function PostComposer({ onPostCreated }: PostComposerProps) {
+export default function PostComposer({ onPostSubmit }: PostComposerProps) {
   const { user } = useAuth();
   const [content, setContent] = useState('');
-  const [mediaList, setMediaList] = useState<AttachedMediaItem[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -37,122 +36,75 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
   const remainingChars = MAX_CHARS - content.length;
   const isOverLimit = remainingChars < 0;
   const isWarning = remainingChars <= 20;
-  const isAnyUploading = mediaList.some((item) => item.isUploading);
-  const hasMedia = mediaList.length > 0 && mediaList.some((item) => !item.isUploading && !!item.url);
   const isContentEmpty = content.trim().length === 0;
+  const hasAttachments = attachments.length > 0;
+  const isSubmitDisabled = (isContentEmpty && !hasAttachments) || isOverLimit;
 
-  // Disabled if (no content AND no uploaded media), or over char limit, or currently uploading, or submitting
-  const isSubmitDisabled = (isContentEmpty && !hasMedia) || isOverLimit || isAnyUploading || isSubmitting;
-
-  const handleFileUpload = async (files: FileList | null, expectedType: 'photo' | 'video') => {
+  const handleFileSelect = (files: FileList | null, type: 'photo' | 'video') => {
     if (!files || files.length === 0) return;
-    setUploadError(null);
+    setAttachError(null);
 
     const fileArray = Array.from(files);
+    const currentVideos = attachments.filter((a) => a.type === 'video');
+    const currentPhotos = attachments.filter((a) => a.type === 'photo');
 
-    const currentVideos = mediaList.filter((m) => m.type === 'video');
-    const currentPhotos = mediaList.filter((m) => m.type === 'photo');
-
-    if (expectedType === 'video') {
+    if (type === 'video') {
       if (currentPhotos.length > 0) {
-        setUploadError('Cannot attach video when photos are already attached.');
+        setAttachError('Cannot attach video when photos are already attached.');
         return;
       }
       if (currentVideos.length >= 1 || fileArray.length > 1) {
-        setUploadError('You can attach max 1 video per post.');
+        setAttachError('You can attach max 1 video per post.');
         return;
       }
     } else {
       if (currentVideos.length > 0) {
-        setUploadError('Cannot attach photos when a video is already attached.');
+        setAttachError('Cannot attach photos when a video is already attached.');
         return;
       }
       if (currentPhotos.length + fileArray.length > MAX_PHOTOS) {
-        setUploadError(`You can attach up to ${MAX_PHOTOS} photos per post.`);
+        setAttachError(`You can attach up to ${MAX_PHOTOS} photos per post.`);
         return;
       }
     }
 
-    for (const file of fileArray) {
-      const tempId = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const previewUrl = URL.createObjectURL(file);
+    const newAttachments: LocalAttachment[] = fileArray.map((file) => ({
+      file,
+      type,
+      previewUrl: URL.createObjectURL(file),
+    }));
 
-      const newItem: AttachedMediaItem = {
-        id: tempId,
-        url: '',
-        type: expectedType,
-        previewUrl,
-        isUploading: true,
-      };
+    setAttachments((prev) => [...prev, ...newAttachments]);
 
-      setMediaList((prev) => [...prev, newItem]);
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const res = await api.upload<{ url: string; type: string }>(API.MEDIA_UPLOAD, formData);
-        if (res.success && res.data?.url) {
-          const uploadedUrl = res.data.url;
-          const mediaType = (res.data.type || expectedType) as 'photo' | 'video' | 'voice';
-
-          setMediaList((prev) =>
-            prev.map((item) =>
-              item.id === tempId
-                ? { ...item, url: uploadedUrl, type: mediaType, isUploading: false }
-                : item
-            )
-          );
-        } else {
-          setUploadError(res.error?.message || 'Failed to upload media file.');
-          setMediaList((prev) => prev.filter((item) => item.id !== tempId));
-        }
-      } catch (err) {
-        console.error('Media upload error:', err);
-        setUploadError('Upload failed. Please check network connection.');
-        setMediaList((prev) => prev.filter((item) => item.id !== tempId));
-      }
-    }
-
-    // Reset file input values
     if (imageInputRef.current) imageInputRef.current.value = '';
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
-  const handleRemoveMedia = (id: string) => {
-    setMediaList((prev) => prev.filter((item) => item.id !== id));
+  const handleRemove = (idx: number) => {
+    setAttachments((prev) => {
+      URL.revokeObjectURL(prev[idx].previewUrl);
+      return prev.filter((_, i) => i !== idx);
+    });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (isSubmitDisabled) return;
 
-    setIsSubmitting(true);
-    setUploadError(null);
+    // Generate a stable key so the feed can match this pending card
+    const pendingKey = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-    const validMedia = mediaList.filter((item) => !item.isUploading && !!item.url);
-    const mediaUrls = validMedia.map((item) => item.url);
-    const mediaTypes = validMedia.map((item) => item.type);
+    onPostSubmit({
+      content,
+      files: attachments.map((a) => ({ file: a.file, type: a.type })),
+      pendingKey,
+    });
 
-    try {
-      const res = await api.post<Post>(API.POSTS, {
-        content,
-        media_urls: mediaUrls,
-        media_types: mediaTypes,
-      });
-
-      if (res.success && res.data) {
-        onPostCreated(res.data);
-        setContent('');
-        setMediaList([]);
-      } else {
-        setUploadError(res.error?.message || 'Failed to create post.');
-      }
-    } catch (error) {
-      console.error('Failed to post:', error);
-      setUploadError('An error occurred while publishing post.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Clear the composer immediately — upload happens in the parent
+    setContent('');
+    // Revoke all object URLs before clearing
+    attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl));
+    setAttachments([]);
+    setAttachError(null);
   };
 
   return (
@@ -169,31 +121,23 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
           placeholder="What's happening?"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          disabled={isSubmitting}
         />
 
-        {/* Media Previews */}
-        {mediaList.length > 0 && (
+        {/* Local preview grid — shown before upload */}
+        {attachments.length > 0 && (
           <div className={styles.mediaPreviewGrid}>
-            {mediaList.map((item) => (
-              <div key={item.id} className={styles.mediaPreviewItem}>
+            {attachments.map((item, idx) => (
+              <div key={idx} className={styles.mediaPreviewItem}>
                 {item.type === 'video' ? (
                   <video src={item.previewUrl} className={styles.previewVideo} muted />
                 ) : (
                   <img src={item.previewUrl} alt="Preview" className={styles.previewImage} />
                 )}
-
-                {item.isUploading && (
-                  <div className={styles.uploadOverlay}>
-                    <div className={styles.spinner} />
-                  </div>
-                )}
-
                 <button
                   type="button"
                   className={styles.removeBtn}
-                  onClick={() => handleRemoveMedia(item.id)}
-                  aria-label="Remove media"
+                  onClick={() => handleRemove(idx)}
+                  aria-label="Remove attachment"
                 >
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -205,7 +149,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
           </div>
         )}
 
-        {uploadError && <div className={styles.errorMessage}>{uploadError}</div>}
+        {attachError && <div className={styles.errorMessage}>{attachError}</div>}
 
         <div className={styles.footer}>
           <div className={styles.toolbar}>
@@ -216,18 +160,14 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
               accept="image/*"
               multiple
               style={{ display: 'none' }}
-              onChange={(e) => {
-                void handleFileUpload(e.target.files, 'photo');
-              }}
+              onChange={(e) => handleFileSelect(e.target.files, 'photo')}
             />
             <input
               type="file"
               ref={videoInputRef}
               accept="video/*"
               style={{ display: 'none' }}
-              onChange={(e) => {
-                void handleFileUpload(e.target.files, 'video');
-              }}
+              onChange={(e) => handleFileSelect(e.target.files, 'video')}
             />
 
             {/* Photo Attachment Button */}
@@ -236,7 +176,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
               className={styles.toolBtn}
               onClick={() => imageInputRef.current?.click()}
               title="Attach photos (up to 10)"
-              disabled={isSubmitting || mediaList.some((m) => m.type === 'video')}
+              disabled={attachments.some((a) => a.type === 'video')}
               aria-label="Attach photos"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -252,7 +192,7 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
               className={styles.toolBtn}
               onClick={() => videoInputRef.current?.click()}
               title="Attach video (max 500MB)"
-              disabled={isSubmitting || mediaList.length > 0}
+              disabled={attachments.length > 0}
               aria-label="Attach video"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -269,11 +209,8 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
             <Button
               variant="primary"
               size="sm"
-              loading={isSubmitting || isAnyUploading}
               disabled={isSubmitDisabled}
-              onClick={() => {
-                void handleSubmit();
-              }}
+              onClick={handleSubmit}
             >
               Post
             </Button>
