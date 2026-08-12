@@ -4,6 +4,8 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/seizmann/rexio-city/backend/go/internal/config"
+	"github.com/seizmann/rexio-city/backend/go/internal/middleware"
 	"github.com/seizmann/rexio-city/backend/go/internal/services"
 )
 
@@ -68,12 +70,15 @@ func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 	})
 }
 
-// GetPost handles GET /api/posts/:id (accepts public_id string or numeric ID)
+// GetPost handles GET /api/posts/:id (publicly accessible, accepts public_id or numeric ID)
 func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	var userID uint
 	if u, ok := c.Locals("user_id").(uint); ok {
 		userID = u
+	} else {
+		cfg := config.Load()
+		userID = middleware.ExtractUserIDFromHeader(c.Get("Authorization"), cfg.JWTSecret)
 	}
 
 	result, err := h.postService.GetPost(services.GetPostInput{
@@ -218,7 +223,7 @@ func (h *PostHandler) CommentOnPost(c *fiber.Ctx) error {
 	})
 }
 
-// GetPostComments handles GET /api/posts/:id/comments
+// GetPostComments handles GET /api/posts/:id/comments (publicly accessible)
 func (h *PostHandler) GetPostComments(c *fiber.Ctx) error {
 	postID := c.Params("id")
 

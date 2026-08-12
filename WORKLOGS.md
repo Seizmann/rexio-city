@@ -551,7 +551,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
-  - **Following Feed & PublicID Migration Fix**: Fixed `ListFeed` query in `services/feed.go` to fetch followed users via ID array without GORM JOIN table column overwriting, safe `user_id` extraction in `handlers/feed.go`, and added automatic SQL backfill in `db.Init()` to populate 16-character `public_id` for all legacy posts in PostgreSQL.
+  - **Public Post Access & Supabase PublicID Migration**: Made `GET /api/posts/:id` and `GET /api/posts/:id/comments` publicly accessible for unauthenticated and authenticated visitors alike, executed DDL migration on Supabase PostgreSQL adding `public_id` column and index, and enabled dual resolution supporting both 16-character public IDs (`/post/5b56e44230f923b8`) and numeric ID fallbacks (`/post/7`).
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:

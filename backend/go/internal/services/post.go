@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
@@ -19,9 +20,9 @@ func NewPostService() *PostService {
 
 // CreatePostInput contains post creation data
 type CreatePostInput struct {
-	UserID    uint
-	Content   string
-	MediaURLs []string
+	UserID     uint
+	Content    string
+	MediaURLs  []string
 	MediaTypes []string
 }
 
@@ -65,20 +66,29 @@ type ListPostsOutput struct {
 // FindPostByIdentifier retrieves a post by its 16-char public_id or numeric ID
 func (s *PostService) FindPostByIdentifier(identifier string) (*models.Post, error) {
 	var post models.Post
-	numID, err := strconv.ParseUint(identifier, 10, 64)
-	if err == nil {
-		res := db.GetDB().Preload("User").Where("id = ? AND deleted_at IS NULL", uint(numID)).First(&post)
-		if res.Error == nil {
+	identifier = strings.TrimSpace(identifier)
+	if identifier == "" {
+		return nil, fmt.Errorf("invalid identifier")
+	}
+
+	// 1. Exact match by public_id
+	if err := db.GetDB().Model(&models.Post{}).Preload("User").Where("public_id = ? AND (deleted_at IS NULL)", identifier).First(&post).Error; err == nil {
+		return &post, nil
+	}
+
+	// 2. Case-insensitive match by public_id
+	if err := db.GetDB().Model(&models.Post{}).Preload("User").Where("LOWER(public_id) = LOWER(?) AND (deleted_at IS NULL)", identifier).First(&post).Error; err == nil {
+		return &post, nil
+	}
+
+	// 3. Fallback to numeric ID if identifier is digits
+	if numID, err := strconv.ParseUint(identifier, 10, 64); err == nil {
+		if err := db.GetDB().Model(&models.Post{}).Preload("User").Where("id = ? AND (deleted_at IS NULL)", uint(numID)).First(&post).Error; err == nil {
 			return &post, nil
 		}
 	}
 
-	res := db.GetDB().Preload("User").Where("public_id = ? AND deleted_at IS NULL", identifier).First(&post)
-	if res.Error != nil {
-		return nil, fmt.Errorf("post not found")
-	}
-
-	return &post, nil
+	return nil, fmt.Errorf("post not found")
 }
 
 // CreatePost creates a new post with a 16-character random public_id
@@ -123,7 +133,7 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 	}
 
 	// Reload post with user
-	db.GetDB().Preload("User").First(&post, post.ID)
+	db.GetDB().Model(&models.Post{}).Preload("User").First(&post, post.ID)
 
 	return &CreatePostOutput{Post: post}, nil
 }
@@ -150,15 +160,23 @@ func (s *PostService) GetPost(input GetPostInput) (*GetPostOutput, error) {
 	var repostCount int64
 	db.GetDB().Model(&models.Repost{}).Where("post_id = ?", post.ID).Count(&repostCount)
 
-	// Check engagement status
+	// Check engagement status safely
 	isLiked := false
 	isReposted := false
 	isBookmarked := false
 
 	if input.UserID > 0 {
-		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&models.Like{}).Scan(&isLiked)
-		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&models.Repost{}).Scan(&isReposted)
-		db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&models.Bookmark{}).Scan(&isBookmarked)
+		var like models.Like
+		db.GetDB().Model(&models.Like{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
+		isLiked = like.ID > 0
+
+		var repost models.Repost
+		db.GetDB().Model(&models.Repost{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
+		isReposted = repost.ID > 0
+
+		var bookmark models.Bookmark
+		db.GetDB().Model(&models.Bookmark{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
+		isBookmarked = bookmark.ID > 0
 	}
 
 	return &GetPostOutput{
@@ -235,15 +253,15 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 
 		if input.UserID > 0 {
 			var like models.Like
-			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
+			db.GetDB().Model(&models.Like{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
 			feedPost.IsLiked = like.ID > 0
 
 			var repost models.Repost
-			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
+			db.GetDB().Model(&models.Repost{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
 			feedPost.IsReposted = repost.ID > 0
 
 			var bookmark models.Bookmark
-			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
+			db.GetDB().Model(&models.Bookmark{}).Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
 			feedPost.IsBookmarked = bookmark.ID > 0
 		}
 
@@ -286,7 +304,7 @@ func (s *PostService) LikePost(identifier string, userID uint) error {
 
 	// Check if already liked
 	var existing models.Like
-	db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
+	db.GetDB().Model(&models.Like{}).Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
 	if existing.ID > 0 {
 		return fmt.Errorf("already liked")
 	}
@@ -342,7 +360,7 @@ func (s *PostService) CommentOnPost(identifier string, userID uint, content stri
 	}
 
 	// Preload author user info before returning
-	db.GetDB().Preload("User").First(&comment, comment.ID)
+	db.GetDB().Model(&models.Comment{}).Preload("User").First(&comment, comment.ID)
 
 	return &comment, nil
 }
@@ -355,7 +373,7 @@ func (s *PostService) GetPostComments(identifier string) ([]models.Comment, erro
 	}
 
 	var comments []models.Comment
-	db.GetDB().Preload("User").
+	db.GetDB().Model(&models.Comment{}).Preload("User").
 		Where("post_id = ?", post.ID).
 		Order("created_at ASC").
 		Find(&comments)
@@ -371,7 +389,7 @@ func (s *PostService) RepostPost(identifier string, userID uint, comment *string
 
 	// Check if already reposted
 	var existing models.Repost
-	db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
+	db.GetDB().Model(&models.Repost{}).Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
 	if existing.ID > 0 {
 		return nil, fmt.Errorf("already reposted")
 	}
@@ -413,7 +431,7 @@ func (s *PostService) BookmarkPost(identifier string, userID uint) error {
 
 	// Check if already bookmarked
 	var existing models.Bookmark
-	db.GetDB().Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
+	db.GetDB().Model(&models.Bookmark{}).Where("user_id = ? AND post_id = ?", userID, post.ID).First(&existing)
 	if existing.ID > 0 {
 		return fmt.Errorf("already bookmarked")
 	}

@@ -54,6 +54,11 @@ func main() {
 	media := app.Group("/api/media")
 	media.Post("/upload", mediaHandler.UploadMedia)
 
+	// Public post endpoints (viewing a post & its comments is public)
+	postHandler := handlers.NewPostHandler()
+	app.Get("/api/posts/:id", postHandler.GetPost)
+	app.Get("/api/posts/:id/comments", postHandler.GetPostComments)
+
 	// Protected routes (auth required)
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
@@ -65,16 +70,13 @@ func main() {
 	protected.Get("/users/:username", userHandler.GetUser)
 	protected.Get("/search", userHandler.SearchUsers)
 
-	// Post routes
-	postHandler := handlers.NewPostHandler()
+	// Protected Post routes
 	protected.Post("/posts", postHandler.CreatePost)
 	protected.Get("/posts", postHandler.ListPosts)
-	protected.Get("/posts/:id", postHandler.GetPost)
 	protected.Delete("/posts/:id", postHandler.DeletePost)
 	protected.Post("/posts/:id/like", postHandler.LikePost)
 	protected.Delete("/posts/:id/like", postHandler.UnlikePost)
 	protected.Post("/posts/:id/comments", postHandler.CommentOnPost)
-	protected.Get("/posts/:id/comments", postHandler.GetPostComments)
 	protected.Post("/posts/:id/repost", postHandler.RepostPost)
 	protected.Delete("/posts/:id/repost", postHandler.UnrepostPost)
 	protected.Post("/posts/:id/bookmark", postHandler.BookmarkPost)
