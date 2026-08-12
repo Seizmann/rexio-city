@@ -38,8 +38,8 @@ export default function MainLayout({
   // Show loading spinner while auth hydrates
   if (isLoading) {
     return (
-      <div className={styles.loadingScreen}>
-        <div className={styles.loadingSpinner} />
+      <div className={styles.loadingScreen} suppressHydrationWarning>
+        <div className={styles.loadingSpinner} suppressHydrationWarning />
       </div>
     );
   }
@@ -47,18 +47,18 @@ export default function MainLayout({
   // If not authenticated and on home page (/), render page content directly (LandingAuth screen)
   if (!isAuthenticated) {
     if (isHomePage) {
-      return <>{children}</>;
+      return <div suppressHydrationWarning>{children}</div>;
     }
     return null;
   }
 
   // Authenticated user: render full App Shell
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} suppressHydrationWarning>
       <TopBar />
-      <div className={styles.body}>
+      <div className={styles.body} suppressHydrationWarning>
         <Sidebar username={user?.username || ''} />
-        <main className={styles.content}>{children}</main>
+        <main className={styles.content} suppressHydrationWarning>{children}</main>
       </div>
       <BottomNav username={user?.username || ''} />
     </div>

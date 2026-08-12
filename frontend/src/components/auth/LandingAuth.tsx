@@ -96,16 +96,16 @@ export default function LandingAuth() {
   }
 
   return (
-    <div className={styles.landingContainer}>
-      <div className={styles.hero}>
+    <div className={styles.landingContainer} suppressHydrationWarning>
+      <div className={styles.hero} suppressHydrationWarning>
         <h1 className={styles.logo}>RexiO City</h1>
         <p className={styles.tagline}>
           Happening now. Join the conversation today.
         </p>
       </div>
 
-      <div className={styles.card}>
-        <div className={styles.tabHeader} role="tablist">
+      <div className={styles.card} suppressHydrationWarning>
+        <div className={styles.tabHeader} role="tablist" suppressHydrationWarning>
           <button
             className={`${styles.tabBtn} ${activeTab === 'login' ? styles.tabBtnActive : ''}`}
             onClick={() => setActiveTab('login')}
@@ -125,7 +125,7 @@ export default function LandingAuth() {
         </div>
 
         {activeTab === 'login' ? (
-          <form onSubmit={(e) => void handleLoginSubmit(e)} className={styles.form}>
+          <form onSubmit={(e) => void handleLoginSubmit(e)} className={styles.form} suppressHydrationWarning>
             {loginError && <div className={styles.formError}>{loginError}</div>}
 
             <Input
@@ -153,7 +153,7 @@ export default function LandingAuth() {
             </Button>
           </form>
         ) : (
-          <form onSubmit={(e) => void handleSignupSubmit(e)} className={styles.form}>
+          <form onSubmit={(e) => void handleSignupSubmit(e)} className={styles.form} suppressHydrationWarning>
             {signupFormError && <div className={styles.formError}>{signupFormError}</div>}
 
             <Input
