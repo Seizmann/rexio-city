@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './PostCard.module.css';
 import { api } from '@/lib/api';
 import { API, ROUTES } from '@/lib/constants';
@@ -15,6 +16,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post, onUpdate }: PostCardProps) {
+  const router = useRouter();
   const [localPost, setLocalPost] = useState<Post>(post);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
 
@@ -29,6 +31,14 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
   const commentCount = localPost.comment_count ?? localPost.comments ?? 0;
   const repostCount = localPost.repost_count ?? localPost.reposts ?? 0;
   const bookmarkCount = localPost.bookmark_count ?? 0;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a') || target.closest('textarea')) {
+      return;
+    }
+    router.push(ROUTES.POST(post.id));
+  };
 
   const handleAction = async (
     actionType: 'like' | 'repost' | 'bookmark',
@@ -86,7 +96,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
 
   return (
     <>
-      <article className={styles.card}>
+      <article className={styles.card} onClick={handleCardClick}>
         <Link href={ROUTES.PROFILE(author.username)}>
           {author.avatar_url ? (
             <img src={author.avatar_url} alt={author.display_name} className={styles.avatar} />

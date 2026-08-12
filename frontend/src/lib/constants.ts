@@ -19,28 +19,28 @@ export const API = {
 
   // Posts
   POSTS: '/api/posts',
-  POST: (id: number) => `/api/posts/${id}`,
-  POST_LIKE: (id: number) => `/api/posts/${id}/like`,
-  POST_COMMENTS: (id: number) => `/api/posts/${id}/comments`,
-  POST_REPOST: (id: number) => `/api/posts/${id}/repost`,
-  POST_BOOKMARK: (id: number) => `/api/posts/${id}/bookmark`,
+  POST: (id: number | string) => `/api/posts/${id}`,
+  POST_LIKE: (id: number | string) => `/api/posts/${id}/like`,
+  POST_COMMENTS: (id: number | string) => `/api/posts/${id}/comments`,
+  POST_REPOST: (id: number | string) => `/api/posts/${id}/repost`,
+  POST_BOOKMARK: (id: number | string) => `/api/posts/${id}/bookmark`,
 
   // Feed
   FEED: '/api/feed',
 
   // Follow
-  FOLLOW: (id: number) => `/api/users/${id}/follow`,
-  FOLLOWERS: (id: number) => `/api/users/${id}/followers`,
-  FOLLOWING: (id: number) => `/api/users/${id}/following`,
-  FOLLOW_COUNTS: (id: number) => `/api/users/${id}/follow-counts`,
-  IS_FOLLOWING: (id: number) => `/api/users/${id}/is-following`,
+  FOLLOW: (id: number | string) => `/api/users/${id}/follow`,
+  FOLLOWERS: (id: number | string) => `/api/users/${id}/followers`,
+  FOLLOWING: (id: number | string) => `/api/users/${id}/following`,
+  FOLLOW_COUNTS: (id: number | string) => `/api/users/${id}/follow-counts`,
+  IS_FOLLOWING: (id: number | string) => `/api/users/${id}/is-following`,
 
   // Media
   MEDIA_UPLOAD: '/api/media/upload',
 
   // Notifications
   NOTIFICATIONS: '/api/notifications',
-  NOTIFICATION_READ: (id: number) => `/api/notifications/${id}/read`,
+  NOTIFICATION_READ: (id: number | string) => `/api/notifications/${id}/read`,
   NOTIFICATIONS_READ_ALL: '/api/notifications/read-all',
   NOTIFICATIONS_UNREAD: '/api/notifications/unread-count',
 } as const;
@@ -52,6 +52,7 @@ export const ROUTES = {
   LOGIN: '/login',
   SIGNUP: '/signup',
   PROFILE: (username: string) => `/profile/${username}`,
+  POST: (id: number | string) => `/post/${id}`,
   MESSAGES: '/messages',
   NOTIFICATIONS: '/notifications',
 } as const;
