@@ -129,7 +129,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
         className={`${styles.card} ${isPending ? styles.cardPending : ''}`}
         onClick={handleCardClick}
       >
-        {/* Uploading status banner */}
+        {/* Upload status banner — full-width strip above the avatar+content row */}
         {isPending && uploadStatus && uploadStatus !== 'done' && (
           <div className={styles.uploadBanner}>
             <span className={styles.uploadDot} />
@@ -142,6 +142,8 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
           </div>
         )}
 
+        {/* Avatar + content row */}
+        <div className={styles.row}>
         <Link href={isPending ? '#' : ROUTES.PROFILE(author.username)}
           onClick={isPending ? (e) => e.preventDefault() : undefined}>
           {author.avatar_url ? (
@@ -151,6 +153,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
           )}
         </Link>
         <div className={styles.content}>
+
           <div className={styles.authorRow}>
             <Link href={isPending ? '#' : ROUTES.PROFILE(author.username)}
               className={styles.authorLink}
@@ -261,6 +264,7 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
               <span>{bookmarkCount > 0 ? bookmarkCount : 0}</span>
             </button>
           </div>
+        </div>
         </div>
       </article>
 

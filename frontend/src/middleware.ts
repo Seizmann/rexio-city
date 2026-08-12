@@ -97,5 +97,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  // Exclude /api/media/upload — handled by the Node.js Route Handler at
+  // app/api/media/upload/route.ts which supports large binary (file) bodies.
+  // Edge middleware cannot stream multipart uploads reliably.
+  matcher: ['/api/((?!media/upload).*)'],
 };
