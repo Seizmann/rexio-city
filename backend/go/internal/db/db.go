@@ -22,8 +22,12 @@ func Init(cfg *config.Config) {
 	}
 
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+	DB, err = gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true, // Disable prepared statement caching for Supabase / PgBouncer pooler compatibility (prevents 42P05 errors)
+	}), &gorm.Config{
+		PrepareStmt: false,
+		Logger:      logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)

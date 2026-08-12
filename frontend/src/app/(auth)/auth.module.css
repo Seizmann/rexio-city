@@ -1,0 +1,66 @@
+.authPage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-5);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+
+.logoText {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.logoSub {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.formError {
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+.footer {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.footerLink {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.footerLink:hover {
+  text-decoration: underline;
+}

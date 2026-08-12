@@ -1,0 +1,52 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--feed-max-width);
+  margin: 0 auto;
+  /* Bottom padding on mobile accounts for the fixed BottomNav */
+  padding-bottom: calc(var(--bottomnav-height) + var(--space-3));
+}
+
+@media (min-width: 768px) {
+  .content {
+    /* On desktop, offset for the sidebar */
+    margin-left: var(--sidebar-width);
+    padding-bottom: var(--space-4);
+  }
+}
+
+/* ── Loading screen ───────────────────────────────────────────── */
+
+.loadingScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.loadingSpinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

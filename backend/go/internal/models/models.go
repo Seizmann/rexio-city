@@ -4,28 +4,28 @@ import "time"
 
 // User represents a platform user
 type User struct {
-	ID             uint       `json:"id" gorm:"primaryKey"`
-	Username       string     `json:"username" gorm:"uniqueIndex;size:15"`
-	DisplayName    *string    `json:"display_name" gorm:"size:50"`
-	Bio            *string    `json:"bio" gorm:"size:160"`
-	AvatarURL      *string    `json:"avatar_url"`
-	CoverURL       *string    `json:"cover_url"`
-	Email          *string    `json:"email" gorm:"uniqueIndex"`
-	PasswordHash   string     `json:"-" gorm:"size:255"`
-	EmailVerified  bool       `json:"email_verified" gorm:"default:false"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID            uint       `json:"id" gorm:"primaryKey"`
+	Username      string     `json:"username" gorm:"uniqueIndex;size:15"`
+	DisplayName   *string    `json:"display_name" gorm:"size:50"`
+	Bio           *string    `json:"bio" gorm:"size:160"`
+	AvatarURL     *string    `json:"avatar_url"`
+	CoverURL      *string    `json:"cover_url"`
+	Email         *string    `json:"email" gorm:"uniqueIndex"`
+	PasswordHash  string     `json:"-" gorm:"size:255"`
+	EmailVerified bool       `json:"email_verified" gorm:"default:false"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // Post represents a social post
 type Post struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    uint      `json:"user_id"`
-	Content   string    `json:"content" gorm:"size:500"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	UserID    uint       `json:"user_id"`
+	Content   string     `json:"content" gorm:"size:500"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at" gorm:"index"`
-	User      User     `json:"user" gorm:"foreignKey:UserID"`
+	User      User       `json:"user" gorm:"foreignKey:UserID"`
 }
 
 // PostMedia represents media attached to a post
@@ -47,6 +47,7 @@ type Comment struct {
 	Content   string    `json:"content" gorm:"size:500"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	User      User      `json:"user" gorm:"foreignKey:UserID"`
 }
 
 // Like represents a like on a post
@@ -105,13 +106,13 @@ type DMMessage struct {
 
 // Notification represents a user notification
 type Notification struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    uint      `json:"user_id"`
-	Type      string    `json:"type"` // follower, like, comment, repost, mention, dm_reply
-	ActorID   *uint     `json:"actor_id"`
-	PostID    *uint     `json:"post_id"`
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	UserID    uint       `json:"user_id"`
+	Type      string     `json:"type"` // follower, like, comment, repost, mention, dm_reply
+	ActorID   *uint      `json:"actor_id"`
+	PostID    *uint      `json:"post_id"`
 	ReadAt    *time.Time `json:"read_at"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 // Setting represents a DB-driven configuration value

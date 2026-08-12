@@ -18,8 +18,8 @@ func NewPostService() *PostService {
 
 // CreatePostInput contains post creation data
 type CreatePostInput struct {
-	UserID uint
-	Content string
+	UserID    uint
+	Content   string
 	MediaURLs []string
 	MediaTypes []string
 }
@@ -37,28 +37,28 @@ type GetPostInput struct {
 
 // GetPostOutput contains post with engagement counts
 type GetPostOutput struct {
-	Post models.Post `json:"post"`
-	Likes int `json:"likes"`
-	Comments int `json:"comments"`
-	Reposts int `json:"reposts"`
-	IsLiked bool `json:"is_liked"`
-	IsReposted bool `json:"is_reposted"`
-	IsBookmarked bool `json:"is_bookmarked"`
+	Post         models.Post `json:"post"`
+	Likes        int         `json:"likes"`
+	Comments     int         `json:"comments"`
+	Reposts      int         `json:"reposts"`
+	IsLiked      bool        `json:"is_liked"`
+	IsReposted   bool        `json:"is_reposted"`
+	IsBookmarked bool        `json:"is_bookmarked"`
 }
 
 // ListPostsInput contains pagination params
 type ListPostsInput struct {
-	UserID uint
-	Page int
+	UserID  uint
+	Page    int
 	PerPage int
 }
 
 // ListPostsOutput contains posts with pagination meta
 type ListPostsOutput struct {
-	Posts []models.Post `json:"posts"`
-	Page int `json:"page"`
-	PerPage int `json:"per_page"`
-	Total int `json:"total"`
+	Posts   []FeedPost `json:"posts"`
+	Page    int        `json:"page"`
+	PerPage int        `json:"per_page"`
+	Total   int        `json:"total"`
 }
 
 // CreatePost creates a new post
@@ -72,8 +72,8 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 
 	// Create post
 	post := models.Post{
-		UserID: input.UserID,
-		Content: input.Content,
+		UserID:    input.UserID,
+		Content:   input.Content,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -86,10 +86,10 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 	// Create media entries if provided
 	for i, url := range input.MediaURLs {
 		media := models.PostMedia{
-			PostID: post.ID,
-			MediaURL: url,
+			PostID:    post.ID,
+			MediaURL:  url,
 			MediaType: input.MediaTypes[i],
-			Order: i,
+			Order:     i,
 			CreatedAt: time.Now(),
 		}
 		if err := db.GetDB().Create(&media).Error; err != nil {
@@ -135,17 +135,17 @@ func (s *PostService) GetPost(input GetPostInput) (*GetPostOutput, error) {
 	}
 
 	return &GetPostOutput{
-		Post: post,
-		Likes: int(likeCount),
-		Comments: int(commentCount),
-		Reposts: int(repostCount),
-		IsLiked: isLiked,
-		IsReposted: isReposted,
+		Post:         post,
+		Likes:        int(likeCount),
+		Comments:     int(commentCount),
+		Reposts:      int(repostCount),
+		IsLiked:      isLiked,
+		IsReposted:   isReposted,
 		IsBookmarked: isBookmarked,
 	}, nil
 }
 
-// ListPosts retrieves a list of posts with pagination
+// ListPosts retrieves a list of posts with engagement counts and pagination
 func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) {
 	if input.Page < 1 {
 		input.Page = 1
@@ -164,18 +164,64 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 	query.Count(&total)
 
 	offset := (input.Page - 1) * input.PerPage
-	db.GetDB().Preload("User").
-		Where("deleted_at IS NULL").
+	query.Preload("User").
 		Order("created_at DESC").
 		Offset(offset).
 		Limit(input.PerPage).
 		Find(&posts)
 
+	feedPosts := make([]FeedPost, 0, len(posts))
+	for _, post := range posts {
+		feedPost := FeedPost{
+			ID:        post.ID,
+			UserID:    post.UserID,
+			Content:   post.Content,
+			CreatedAt: post.CreatedAt,
+			User:      post.User,
+		}
+
+		var likeCount int64
+		db.GetDB().Model(&models.Like{}).Where("post_id = ?", post.ID).Count(&likeCount)
+		feedPost.Likes = int(likeCount)
+		feedPost.LikeCount = int(likeCount)
+
+		var commentCount int64
+		db.GetDB().Model(&models.Comment{}).Where("post_id = ?", post.ID).Count(&commentCount)
+		feedPost.Comments = int(commentCount)
+		feedPost.CommentCount = int(commentCount)
+
+		var repostCount int64
+		db.GetDB().Model(&models.Repost{}).Where("post_id = ?", post.ID).Count(&repostCount)
+		feedPost.Reposts = int(repostCount)
+		feedPost.RepostCount = int(repostCount)
+
+		var bookmarkCount int64
+		db.GetDB().Model(&models.Bookmark{}).Where("post_id = ?", post.ID).Count(&bookmarkCount)
+		feedPost.Bookmarks = int(bookmarkCount)
+		feedPost.BookmarkCount = int(bookmarkCount)
+
+		if input.UserID > 0 {
+			var like models.Like
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&like)
+			feedPost.IsLiked = like.ID > 0
+
+			var repost models.Repost
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&repost)
+			feedPost.IsReposted = repost.ID > 0
+
+			var bookmark models.Bookmark
+			db.GetDB().Where("user_id = ? AND post_id = ?", input.UserID, post.ID).First(&bookmark)
+			feedPost.IsBookmarked = bookmark.ID > 0
+		}
+
+		feedPosts = append(feedPosts, feedPost)
+	}
+
 	return &ListPostsOutput{
-		Posts: posts,
-		Page: input.Page,
+		Posts:   feedPosts,
+		Page:    input.Page,
 		PerPage: input.PerPage,
-		Total: int(total),
+		Total:   int(total),
 	}, nil
 }
 
@@ -209,8 +255,8 @@ func (s *PostService) LikePost(postID uint, userID uint) error {
 	}
 
 	like := models.Like{
-		UserID: userID,
-		PostID: postID,
+		UserID:    userID,
+		PostID:    postID,
 		CreatedAt: time.Now(),
 	}
 
@@ -226,7 +272,7 @@ func (s *PostService) UnlikePost(postID uint, userID uint) error {
 	return nil
 }
 
-// CommentOnPost adds a comment to a post
+// CommentOnPost adds a comment to a post and preloads author User relation
 func (s *PostService) CommentOnPost(postID uint, userID uint, content string, parentID *uint) (*models.Comment, error) {
 	if len(content) == 0 {
 		return nil, fmt.Errorf("comment content cannot be empty")
@@ -236,10 +282,10 @@ func (s *PostService) CommentOnPost(postID uint, userID uint, content string, pa
 	}
 
 	comment := models.Comment{
-		UserID: userID,
-		PostID: postID,
-		Content: content,
-		ParentID: parentID,
+		UserID:    userID,
+		PostID:    postID,
+		Content:   content,
+		ParentID:  parentID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -248,13 +294,17 @@ func (s *PostService) CommentOnPost(postID uint, userID uint, content string, pa
 		return nil, fmt.Errorf("failed to create comment: %w", err)
 	}
 
+	// Preload author user info before returning
+	db.GetDB().Preload("User").First(&comment, comment.ID)
+
 	return &comment, nil
 }
 
-// GetPostComments retrieves comments for a post
+// GetPostComments retrieves comments for a post with preloaded author User relation
 func (s *PostService) GetPostComments(postID uint) ([]models.Comment, error) {
 	var comments []models.Comment
-	db.GetDB().Where("post_id = ?", postID).
+	db.GetDB().Preload("User").
+		Where("post_id = ?", postID).
 		Order("created_at ASC").
 		Find(&comments)
 	return comments, nil
@@ -270,9 +320,9 @@ func (s *PostService) RepostPost(postID uint, userID uint, comment *string) (*mo
 	}
 
 	repost := models.Repost{
-		UserID: userID,
-		PostID: postID,
-		Comment: comment,
+		UserID:    userID,
+		PostID:    postID,
+		Comment:   comment,
 		CreatedAt: time.Now(),
 	}
 
@@ -302,8 +352,8 @@ func (s *PostService) BookmarkPost(postID uint, userID uint) error {
 	}
 
 	bookmark := models.Bookmark{
-		UserID: userID,
-		PostID: postID,
+		UserID:    userID,
+		PostID:    postID,
 		CreatedAt: time.Now(),
 	}
 

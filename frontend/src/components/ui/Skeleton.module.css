@@ -1,0 +1,101 @@
+.skeleton {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--bg-elevated) 50%, transparent) 50%,
+    transparent 100%
+  );
+  animation: sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Preset shapes ────────────────────────────────────────────── */
+
+.circle {
+  border-radius: var(--radius-full);
+}
+
+.text {
+  height: 14px;
+  margin-bottom: var(--space-2);
+}
+
+.textShort {
+  width: 60%;
+}
+
+.textMedium {
+  width: 80%;
+}
+
+.textFull {
+  width: 100%;
+}
+
+/* ── Post card skeleton ───────────────────────────────────────── */
+
+.postSkeleton {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.postSkeletonHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.postSkeletonAvatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.postSkeletonMeta {
+  flex: 1;
+}
+
+.postSkeletonName {
+  height: 14px;
+  width: 120px;
+  margin-bottom: var(--space-1);
+}
+
+.postSkeletonUsername {
+  height: 12px;
+  width: 80px;
+}
+
+.postSkeletonBody {
+  margin-bottom: var(--space-3);
+}
+
+.postSkeletonActions {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.postSkeletonAction {
+  height: 14px;
+  width: 40px;
+}

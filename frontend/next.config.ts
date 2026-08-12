@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Force webpack instead of Turbopack for Vercel compatibility
   turbopack: {},
   images: {
     remotePatterns: [
@@ -14,3 +13,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+

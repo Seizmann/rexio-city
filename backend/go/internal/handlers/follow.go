@@ -171,8 +171,10 @@ func (h *FollowHandler) GetFollowCounts(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"followers": followers,
-			"following": following,
+			"followers":       followers,
+			"following":       following,
+			"follower_count":  followers,
+			"following_count": following,
 		},
 	})
 }

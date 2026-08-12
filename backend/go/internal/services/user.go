@@ -18,22 +18,24 @@ func NewUserService() *UserService {
 
 // UserProfile contains user data with follow status
 type UserProfile struct {
-	ID         uint    `json:"id"`
-	Username   string  `json:"username"`
-	DisplayName *string `json:"display_name"`
-	Bio        *string `json:"bio"`
-	AvatarURL  *string `json:"avatar_url"`
-	CoverURL   *string `json:"cover_url"`
-	Followers  int     `json:"followers"`
-	Following  int     `json:"following"`
-	IsFollowing bool   `json:"is_following"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID             uint      `json:"id"`
+	Username       string    `json:"username"`
+	DisplayName    *string   `json:"display_name"`
+	Bio            *string   `json:"bio"`
+	AvatarURL      *string   `json:"avatar_url"`
+	CoverURL       *string   `json:"cover_url"`
+	Followers      int       `json:"followers"`
+	Following      int       `json:"following"`
+	FollowerCount  int       `json:"follower_count"`
+	FollowingCount int       `json:"following_count"`
+	IsFollowing    bool      `json:"is_following"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // GetUserInput contains parameters for getting a user
 type GetUserInput struct {
-	UserID uint
-	Username string
+	UserID        uint
+	Username      string
 	CurrentUserID uint // For checking follow status
 }
 
@@ -107,7 +109,7 @@ func (s *UserService) UpdateUser(userID uint, input UpdateUserInput) (*UserProfi
 // SearchUsersResult contains search results
 type SearchUsersResult struct {
 	Users []models.User `json:"users"`
-	Total int `json:"total"`
+	Total int           `json:"total"`
 }
 
 // SearchUsers searches for users by username or display name
@@ -152,16 +154,18 @@ func (s *UserService) buildUserProfile(user models.User, currentUserID uint) (*U
 	}
 
 	return &UserProfile{
-		ID: user.ID,
-		Username: user.Username,
-		DisplayName: user.DisplayName,
-		Bio: user.Bio,
-		AvatarURL: user.AvatarURL,
-		CoverURL: user.CoverURL,
-		Followers: followers,
-		Following: following,
-		IsFollowing: isFollowing,
-		CreatedAt: user.CreatedAt,
+		ID:             user.ID,
+		Username:       user.Username,
+		DisplayName:    user.DisplayName,
+		Bio:            user.Bio,
+		AvatarURL:      user.AvatarURL,
+		CoverURL:       user.CoverURL,
+		Followers:      followers,
+		Following:      following,
+		FollowerCount:  followers,
+		FollowingCount: following,
+		IsFollowing:    isFollowing,
+		CreatedAt:      user.CreatedAt,
 	}, nil
 }
 

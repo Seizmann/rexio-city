@@ -1,0 +1,36 @@
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Install git for go modules
+RUN apk add --no-cache git
+
+# Copy go.mod and go.sum
+COPY backend/go/go.mod backend/go/go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY backend/go ./
+
+# Build
+RUN CGO_ENABLED=0 GOOS=linux go build -o api ./cmd/api
+
+# Runtime stage
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+ENV TZ=Asia/Dhaka
+
+WORKDIR /app
+
+# Copy binary
+COPY --from=builder /app/api .
+
+# Run on port 10888
+ENV PORT=10888
+
+EXPOSE 10888
+
+CMD ["./api"]

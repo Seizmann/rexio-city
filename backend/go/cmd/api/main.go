@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,8 +20,8 @@ func main() {
 	db.Migrate()
 
 	app := fiber.New(fiber.Config{
-		ReadTimeout:  10 * 1000,
-		WriteTimeout: 10 * 1000,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	})
 
 	// CORS — only allow frontend origin
