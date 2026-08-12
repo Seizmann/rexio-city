@@ -5,7 +5,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/websocket/v2"
 	"github.com/seizmann/rexio-city/backend/go/internal/config"
 	"github.com/seizmann/rexio-city/backend/go/internal/db"
 	"github.com/seizmann/rexio-city/backend/go/internal/handlers"
