@@ -1,23 +1,36 @@
 package handlers
 
 import (
+	"errors"
+	"log"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/seizmann/rexio-city/backend/go/internal/config"
+	"github.com/seizmann/rexio-city/backend/go/internal/middleware"
 	"github.com/seizmann/rexio-city/backend/go/internal/services"
 )
 
-// AuthHandler handles authentication requests
+const refreshCookieName = "rexio_refresh"
+
+// AuthHandler handles authentication requests.
 type AuthHandler struct {
-	authService *services.AuthService
+	authService    *services.AuthService
+	sessionService *services.SessionService
+	emailService   *services.EmailService
 }
 
-// NewAuthHandler creates a new auth handler
+// NewAuthHandler creates a new auth handler.
 func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{
-		authService: services.NewAuthService(),
+		authService:    services.NewAuthService(),
+		sessionService: services.NewSessionService(),
+		emailService:   services.NewEmailService(),
 	}
 }
 
-// SignupRequest represents a signup request body
+/* ── Request Bodies ─────────────────────────────────────────────── */
+
 type SignupRequest struct {
 	Username    string `json:"username"`
 	Email       string `json:"email"`
@@ -25,32 +38,33 @@ type SignupRequest struct {
 	DisplayName string `json:"display_name"`
 }
 
-// LoginRequest represents a login request body
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-// RefreshRequest represents a refresh request body
-type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
+/* ── Signup ─────────────────────────────────────────────────────── */
 
-// Signup handles user registration
+// Signup handles user registration.
+// Returns access_token in JSON body; sets refresh token as httpOnly cookie.
 func (h *AuthHandler) Signup(c *fiber.Ctx) error {
+	cfg := config.Load()
+
 	var input SignupRequest
 	if err := c.BodyParser(&input); err != nil {
-		return c.JSON(fiber.Map{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
-	result, err := h.authService.Signup(services.SignupInput{
+	result, rawRefreshToken, err := h.authService.Signup(services.SignupInput{
 		Username:    input.Username,
 		Email:       input.Email,
 		Password:    input.Password,
 		DisplayName: input.DisplayName,
+		DeviceInfo:  c.Get("User-Agent"),
+		IPAddress:   c.IP(),
 	})
 	if err != nil {
 		statusCode := fiber.StatusBadRequest
@@ -63,68 +77,111 @@ func (h *AuthHandler) Signup(c *fiber.Ctx) error {
 		})
 	}
 
+	// Set refresh token as httpOnly cookie — JS cannot read this
+	setRefreshCookie(c, rawRefreshToken, cfg)
+
+	// Issue the CSRF token cookie (readable by JS for double-submit)
+	middleware.IssueCSRFCookie(c, cfg.CSRFSecret, cfg.CookieSecure, cfg.CookieDomain)
+
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"user":          result.User,
-			"access_token":  result.AccessToken,
-			"refresh_token": result.RefreshToken,
-			"expires_in":    result.ExpiresIn,
+			"user":         result.User,
+			"access_token": result.AccessToken,
+			"expires_in":   result.ExpiresIn,
 		},
 	})
 }
 
-// Login handles user authentication
+/* ── Login ──────────────────────────────────────────────────────── */
+
+// Login handles user authentication.
+// Returns access_token in JSON body; sets refresh token as httpOnly cookie.
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	cfg := config.Load()
+
 	var input LoginRequest
 	if err := c.BodyParser(&input); err != nil {
-		return c.JSON(fiber.Map{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
-	result, err := h.authService.Login(services.LoginInput{
-		Email:    input.Email,
-		Password: input.Password,
+	result, rawRefreshToken, err := h.authService.Login(services.LoginInput{
+		Email:      input.Email,
+		Password:   input.Password,
+		DeviceInfo: c.Get("User-Agent"),
+		IPAddress:  c.IP(),
 	})
 	if err != nil {
-		return c.JSON(fiber.Map{
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"success": false,
 			"error":   fiber.Map{"code": "AUTH_ERROR", "message": err.Error()},
 		})
+	}
+
+	// Set refresh token as httpOnly cookie
+	setRefreshCookie(c, rawRefreshToken, cfg)
+
+	// Issue CSRF cookie
+	middleware.IssueCSRFCookie(c, cfg.CSRFSecret, cfg.CookieSecure, cfg.CookieDomain)
+
+	// Send new-device email alert asynchronously — don't block the response
+	if result.IsNewDevice && result.User.Email != nil {
+		go func() {
+			if err := h.emailService.SendNewDeviceAlert(
+				*result.User.Email,
+				result.User.Username,
+				c.Get("User-Agent"),
+				c.IP(),
+				time.Now(),
+			); err != nil {
+				log.Printf("[auth] new-device email failed for user %d: %v", result.User.ID, err)
+			}
+		}()
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"user":          result.User,
-			"access_token":  result.AccessToken,
-			"refresh_token": result.RefreshToken,
-			"expires_in":    result.ExpiresIn,
+			"user":         result.User,
+			"access_token": result.AccessToken,
+			"expires_in":   result.ExpiresIn,
 		},
 	})
 }
 
-// Refresh handles token refresh
+/* ── Token Refresh (cookie-based) ───────────────────────────────── */
+
+// Refresh reads the httpOnly cookie, rotates the session, and returns a new access token.
+// The new refresh token is also set as a cookie automatically.
 func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
-	var input RefreshRequest
-	if err := c.BodyParser(&input); err != nil {
-		return c.JSON(fiber.Map{
+	cfg := config.Load()
+
+	rawRefreshToken := c.Cookies(refreshCookieName)
+
+	result, newRawToken, err := h.authService.RefreshToken(services.RefreshInput{
+		RefreshToken: rawRefreshToken,
+		DeviceInfo:   c.Get("User-Agent"),
+		IPAddress:    c.IP(),
+	})
+	if err != nil {
+		// Whether it's reuse detection or an expired token, clear the cookie
+		clearRefreshCookie(c, cfg)
+
+		code := "AUTH_ERROR"
+		if errors.Is(err, services.ErrTokenReuse) {
+			code = "SESSION_COMPROMISED"
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"success": false,
-			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": code, "message": err.Error()},
 		})
 	}
 
-	result, err := h.authService.RefreshToken(services.RefreshInput{
-		RefreshToken: input.RefreshToken,
-	})
-	if err != nil {
-		return c.JSON(fiber.Map{
-			"success": false,
-			"error":   fiber.Map{"code": "AUTH_ERROR", "message": err.Error()},
-		})
-	}
+	// Set the new (rotated) refresh token cookie
+	setRefreshCookie(c, newRawToken, cfg)
 
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -135,10 +192,107 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	})
 }
 
-// Health handles health checks
+/* ── Logout ─────────────────────────────────────────────────────── */
+
+// Logout revokes the current session and clears the cookie.
+func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	cfg := config.Load()
+	rawRefreshToken := c.Cookies(refreshCookieName)
+
+	if rawRefreshToken != "" {
+		// Best-effort revoke — don't fail the logout if the session is already gone
+		_ = h.sessionService.RevokeAllSessions(c.Locals("user_id").(uint))
+	}
+
+	clearRefreshCookie(c, cfg)
+	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"message": "logged out"}})
+}
+
+/* ── Session Management Endpoints ───────────────────────────────── */
+
+// ListSessions returns all active sessions (devices) for the logged-in user.
+func (h *AuthHandler) ListSessions(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	sessions, err := h.sessionService.ListActiveSessions(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   fiber.Map{"code": "INTERNAL_ERROR", "message": "Failed to list sessions"},
+		})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": sessions})
+}
+
+// RevokeSession revokes a specific session by ID (must belong to the calling user).
+func (h *AuthHandler) RevokeSession(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	sessionID, err := c.ParamsInt("id")
+	if err != nil || sessionID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid session ID"},
+		})
+	}
+
+	if err := h.sessionService.RevokeSessionByID(uint(sessionID), userID); err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"message": "session revoked"}})
+}
+
+// LogoutAll revokes every session for the user and clears the cookie.
+func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
+	cfg := config.Load()
+	userID := c.Locals("user_id").(uint)
+
+	if err := h.sessionService.RevokeAllSessions(userID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   fiber.Map{"code": "INTERNAL_ERROR", "message": "Failed to revoke sessions"},
+		})
+	}
+
+	clearRefreshCookie(c, cfg)
+	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"message": "all sessions revoked"}})
+}
+
+/* ── Health ─────────────────────────────────────────────────────── */
+
 func (h *AuthHandler) Health(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{
-		"success": true,
-		"data":    fiber.Map{"status": "healthy"},
+	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"status": "healthy"}})
+}
+
+/* ── Cookie Helpers ─────────────────────────────────────────────── */
+
+// setRefreshCookie sets the httpOnly refresh token cookie.
+// SameSite=Strict prevents CSRF from sending this cookie cross-origin.
+func setRefreshCookie(c *fiber.Ctx, rawToken string, cfg *config.Config) {
+	c.Cookie(&fiber.Cookie{
+		Name:     refreshCookieName,
+		Value:    rawToken,
+		Path:     "/api/auth", // scoped: only sent to auth endpoints
+		Domain:   cfg.CookieDomain,
+		Expires:  time.Now().Add(cfg.RefreshExpiry),
+		Secure:   cfg.CookieSecure,
+		HTTPOnly: true,         // JS cannot read this
+		SameSite: "Strict",
+	})
+}
+
+// clearRefreshCookie deletes the refresh token cookie by expiring it.
+func clearRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
+	c.Cookie(&fiber.Cookie{
+		Name:     refreshCookieName,
+		Value:    "",
+		Path:     "/api/auth",
+		Domain:   cfg.CookieDomain,
+		Expires:  time.Unix(0, 0),
+		Secure:   cfg.CookieSecure,
+		HTTPOnly: true,
+		SameSite: "Strict",
 	})
 }

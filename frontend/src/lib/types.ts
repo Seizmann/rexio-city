@@ -65,8 +65,23 @@ export interface Comment {
 export interface AuthData {
   user: User;
   access_token: string;
-  refresh_token: string;
+  // refresh_token intentionally absent: it is now set as an httpOnly cookie
+  // by the backend and is never accessible to JavaScript.
   expires_in: number;
+}
+
+/* ── Session (device management) ──────────────────────────────── */
+
+export interface Session {
+  id: number;
+  user_id: number;
+  parent_session_id: number | null;
+  device_info: string;    // User-Agent string
+  ip_address: string;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
+  revoked_at: string | null; // null = active
 }
 
 export interface SignupPayload {

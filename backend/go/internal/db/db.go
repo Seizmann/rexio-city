@@ -55,8 +55,29 @@ func Init(cfg *config.Config) {
 	DB.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_public_id ON posts (public_id)")
 	DB.Exec("UPDATE posts SET public_id = SUBSTRING(MD5(RANDOM()::text || id::text) FROM 1 FOR 16) WHERE public_id IS NULL OR public_id = ''")
 
+	// Ensure sessions table exists (migration 002). We use raw SQL so this is
+	// idempotent and safe to run at startup even if already applied.
+	DB.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+		id                BIGSERIAL PRIMARY KEY,
+		user_id           BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		token_hash        VARCHAR(64) UNIQUE NOT NULL,
+		parent_session_id BIGINT REFERENCES sessions(id) ON DELETE SET NULL,
+		device_info       TEXT,
+		ip_address        VARCHAR(45),
+		created_at        TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		last_used_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		expires_at        TIMESTAMP WITH TIME ZONE NOT NULL,
+		revoked_at        TIMESTAMP WITH TIME ZONE
+	)`)
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_session_id)")
+	// Drop old bare refresh_tokens table (superseded by sessions)
+	DB.Exec("DROP TABLE IF EXISTS refresh_tokens")
+
 	log.Println("Database connected successfully")
 }
+
 
 // GetDB returns the global database instance
 func GetDB() *gorm.DB {

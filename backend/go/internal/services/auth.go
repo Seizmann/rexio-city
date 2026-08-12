@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	// Argon2 parameters
+	// Argon2 parameters (OWASP recommended minimums)
 	saltLength  = 16
 	keyLength   = 32
 	timeCost    = 3
@@ -25,139 +25,127 @@ const (
 	parallelism = 1
 )
 
-// AuthService handles authentication logic
-type AuthService struct{}
+// AuthService handles authentication logic.
+type AuthService struct {
+	sessions *SessionService
+	email    *EmailService
+}
 
-// NewAuthService creates a new auth service
+// NewAuthService creates a new auth service.
 func NewAuthService() *AuthService {
-	return &AuthService{}
+	return &AuthService{
+		sessions: NewSessionService(),
+		email:    NewEmailService(),
+	}
 }
 
-// SignupInput contains signup request data
+/* ── Input / Output DTOs ────────────────────────────────────────── */
+
 type SignupInput struct {
-	Username    string `json:"username"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	DisplayName string `json:"display_name"`
+	Username    string
+	Email       string
+	Password    string
+	DisplayName string
+	DeviceInfo  string // User-Agent, injected by handler
+	IPAddress   string // client IP, injected by handler
 }
 
-// SignupOutput contains signup response data
+// SignupOutput omits RefreshToken — it is set as an httpOnly cookie by the handler.
 type SignupOutput struct {
-	User         models.User `json:"user"`
-	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
-	ExpiresIn    int         `json:"expires_in"`
+	User        models.User `json:"user"`
+	AccessToken string      `json:"access_token"`
+	ExpiresIn   int         `json:"expires_in"`
+	// SessionID is passed back so the handler can tell if this is "new device"
+	SessionID uint `json:"-"`
 }
 
-// LoginInput contains login request data
 type LoginInput struct {
-	Email    string `json:"email"` // Accept either email or username
-	Password string `json:"password"`
+	Email      string
+	Password   string
+	DeviceInfo string
+	IPAddress  string
 }
 
-// LoginOutput contains login response data
+// LoginOutput omits RefreshToken — it is set as an httpOnly cookie by the handler.
 type LoginOutput struct {
 	User         models.User `json:"user"`
 	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
 	ExpiresIn    int         `json:"expires_in"`
+	RefreshToken string      `json:"-"` // populated internally, handler sets cookie
+	IsNewDevice  bool        `json:"-"` // handler uses this to send email alert
 }
 
-// RefreshInput contains refresh request data
 type RefreshInput struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string // read from httpOnly cookie by handler, passed here
+	DeviceInfo   string
+	IPAddress    string
 }
 
-// RefreshOutput contains refresh response data
+// RefreshOutput omits RefreshToken — handler sets the new cookie.
 type RefreshOutput struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int    `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"-"` // new rotated token, handler sets cookie
 }
 
-// HashPassword hashes a password using argon2id
+/* ── Password Helpers ───────────────────────────────────────────── */
+
+// HashPassword hashes a password using argon2id. Stores as "saltHex:hashHex".
 func HashPassword(password string) (string, error) {
 	salt := generateRandomBytes(saltLength)
 	hash := argon2.IDKey([]byte(password), salt, timeCost, memoryCost, parallelism, keyLength)
-
-	// Encode as hex
-	saltHex := fmt.Sprintf("%x", salt)
-	hashHex := fmt.Sprintf("%x", hash)
-
-	// Return in format: hex(salt):hex(hash)
-	encodedPassword := saltHex + ":" + hashHex
-	return encodedPassword, nil
+	return fmt.Sprintf("%x:%x", salt, hash), nil
 }
 
-// VerifyPassword verifies a password against its hash
-func VerifyPassword(password, hash string) bool {
-	parts := []byte(hash)
-	colonIndex := -1
-	for i, b := range parts {
-		if b == ':' {
-			colonIndex = i
-			break
-		}
-	}
-
-	if colonIndex == -1 {
+// VerifyPassword verifies a password against its stored argon2id hash.
+func VerifyPassword(password, stored string) bool {
+	parts := strings.SplitN(stored, ":", 2)
+	if len(parts) != 2 {
 		return false
 	}
-
-	saltHex := string(parts[:colonIndex])
-	hashHex := string(parts[colonIndex+1:])
-
-	// Decode hex strings
-	salt, err := decodeHex(saltHex)
+	salt, err := decodeHex(parts[0])
 	if err != nil {
 		return false
 	}
-
-	expectedHash, err := decodeHex(hashHex)
+	expected, err := decodeHex(parts[1])
 	if err != nil {
 		return false
 	}
-
-	// Verify password
-	computedHash := argon2.IDKey([]byte(password), salt, timeCost, memoryCost, parallelism, keyLength)
-	return constantTimeCompare(computedHash, expectedHash)
+	computed := argon2.IDKey([]byte(password), salt, timeCost, memoryCost, parallelism, keyLength)
+	return constantTimeCompare(computed, expected)
 }
 
-// Signup creates a new user and returns JWT tokens
-func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
+/* ── Signup ─────────────────────────────────────────────────────── */
+
+// Signup creates a new user, persists a DB session, and returns tokens.
+// The caller (handler) is responsible for setting the refresh token as an httpOnly cookie.
+func (s *AuthService) Signup(input SignupInput) (*SignupOutput, string, error) {
 	cfg := config.Load()
 
 	cleanUsername := strings.TrimSpace(strings.ToLower(input.Username))
 	cleanEmail := strings.TrimSpace(strings.ToLower(input.Email))
 
-	// Validate username
 	if !isValidUsername(cleanUsername) {
-		return nil, errors.New("username must be 3-15 characters, lowercase letters, numbers, and underscores only")
+		return nil, "", errors.New("username must be 3-15 characters, lowercase letters, numbers, and underscores only")
 	}
-
-	// Validate password length
 	if len(input.Password) < 8 {
-		return nil, errors.New("password must be at least 8 characters")
+		return nil, "", errors.New("password must be at least 8 characters")
 	}
 
-	// Check if username exists
+	// Uniqueness checks
 	var existingUser models.User
-	result := db.GetDB().Where("LOWER(username) = ?", cleanUsername).First(&existingUser)
-	if result.RowsAffected > 0 {
-		return nil, errors.New("username already taken")
+	if db.GetDB().Where("LOWER(username) = ?", cleanUsername).First(&existingUser).RowsAffected > 0 {
+		return nil, "", errors.New("username already taken")
 	}
-
-	// Check if email exists (if provided)
 	if cleanEmail != "" {
-		result = db.GetDB().Where("LOWER(email) = ?", cleanEmail).First(&existingUser)
-		if result.RowsAffected > 0 {
-			return nil, errors.New("email already registered")
+		if db.GetDB().Where("LOWER(email) = ?", cleanEmail).First(&existingUser).RowsAffected > 0 {
+			return nil, "", errors.New("email already registered")
 		}
 	}
 
-	// Hash password
 	hashedPassword, err := HashPassword(input.Password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %w", err)
+		return nil, "", fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	displayName := strings.TrimSpace(input.DisplayName)
@@ -165,7 +153,6 @@ func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
 		displayName = cleanUsername
 	}
 
-	// Create user
 	user := models.User{
 		Username:     norm.NFC.String(cleanUsername),
 		DisplayName:  &displayName,
@@ -174,104 +161,148 @@ func (s *AuthService) Signup(input SignupInput) (*SignupOutput, error) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-
-	result = db.GetDB().Create(&user)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to create user: %w", result.Error)
+	if result := db.GetDB().Create(&user); result.Error != nil {
+		return nil, "", fmt.Errorf("failed to create user: %w", result.Error)
 	}
 
-	// Generate tokens
 	accessToken, err := middleware.GenerateJWT(uint(user.ID), cfg.JWTSecret, cfg.JWTExpiry)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w", err)
+		return nil, "", fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	refreshToken, err := middleware.GenerateRefreshToken(uint(user.ID), cfg.RefreshSecret, cfg.RefreshExpiry)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+		return nil, "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	expiresAt := time.Now().Add(cfg.RefreshExpiry)
+	session, err := s.sessions.CreateSession(uint(user.ID), refreshToken, input.DeviceInfo, input.IPAddress, expiresAt, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create session: %w", err)
 	}
 
 	return &SignupOutput{
-		User:         user,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    int(cfg.JWTExpiry.Seconds()),
-	}, nil
+		User:        user,
+		AccessToken: accessToken,
+		ExpiresIn:   int(cfg.JWTExpiry.Seconds()),
+		SessionID:   session.ID,
+	}, refreshToken, nil
 }
 
-// Login authenticates a user by email or username and returns JWT tokens
-func (s *AuthService) Login(input LoginInput) (*LoginOutput, error) {
+/* ── Login ──────────────────────────────────────────────────────── */
+
+// Login authenticates a user, persists a DB session, and returns tokens.
+// The caller (handler) sets the refresh token as an httpOnly cookie.
+func (s *AuthService) Login(input LoginInput) (*LoginOutput, string, error) {
 	cfg := config.Load()
 
 	cleanIdentifier := strings.TrimSpace(strings.ToLower(input.Email))
 	if cleanIdentifier == "" {
-		return nil, errors.New("email or username is required")
+		return nil, "", errors.New("email or username is required")
 	}
 
-	// Find user by email or username (case-insensitive)
 	var user models.User
 	result := db.GetDB().Where("LOWER(email) = ? OR LOWER(username) = ?", cleanIdentifier, cleanIdentifier).First(&user)
 	if result.Error != nil || result.RowsAffected == 0 {
-		return nil, errors.New("invalid email or password")
+		return nil, "", errors.New("invalid email or password")
 	}
 
-	// Verify password
 	if !VerifyPassword(input.Password, user.PasswordHash) {
-		return nil, errors.New("invalid email or password")
+		return nil, "", errors.New("invalid email or password")
 	}
 
-	// Generate tokens
+	// Is this a new device? Compare device_info against existing active sessions for this user.
+	activeSessions, _ := s.sessions.ListActiveSessions(uint(user.ID))
+	isNewDevice := true
+	for _, sess := range activeSessions {
+		if sess.DeviceInfo == input.DeviceInfo {
+			isNewDevice = false
+			break
+		}
+	}
+
 	accessToken, err := middleware.GenerateJWT(uint(user.ID), cfg.JWTSecret, cfg.JWTExpiry)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w", err)
+		return nil, "", fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	refreshToken, err := middleware.GenerateRefreshToken(uint(user.ID), cfg.RefreshSecret, cfg.RefreshExpiry)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+		return nil, "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	expiresAt := time.Now().Add(cfg.RefreshExpiry)
+	if _, err = s.sessions.CreateSession(uint(user.ID), refreshToken, input.DeviceInfo, input.IPAddress, expiresAt, nil); err != nil {
+		return nil, "", fmt.Errorf("failed to create session: %w", err)
 	}
 
 	return &LoginOutput{
-		User:         user,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    int(cfg.JWTExpiry.Seconds()),
-	}, nil
+		User:        user,
+		AccessToken: accessToken,
+		ExpiresIn:   int(cfg.JWTExpiry.Seconds()),
+		IsNewDevice: isNewDevice,
+	}, refreshToken, nil
 }
 
-// RefreshToken validates and refreshes a refresh token
-func (s *AuthService) RefreshToken(input RefreshInput) (*RefreshOutput, error) {
+/* ── Refresh (with rotation) ────────────────────────────────────── */
+
+// RefreshToken validates the incoming refresh token from the cookie,
+// rotates it (old invalidated, new issued), persists the new session,
+// and returns the new access + refresh tokens.
+// The caller (handler) reads the cookie and sets the new cookie.
+func (s *AuthService) RefreshToken(input RefreshInput) (*RefreshOutput, string, error) {
 	cfg := config.Load()
 
 	if input.RefreshToken == "" {
-		return nil, errors.New("refresh token is required")
+		return nil, "", errors.New("refresh token cookie missing")
 	}
 
-	// Parse and validate refresh token
-	token, err := middleware.ParseRefreshToken(input.RefreshToken)
+	// Validate the JWT signature and extract user_id before touching the DB
+	claims, err := middleware.ParseRefreshToken(input.RefreshToken, cfg.RefreshSecret)
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, "", errors.New("invalid refresh token")
 	}
 
-	// Extract user ID from claims
-	userID, ok := (*token)["user_id"].(float64)
+	userID, ok := (*claims)["user_id"].(float64)
 	if !ok {
-		return nil, errors.New("invalid token claims")
+		return nil, "", errors.New("invalid token claims")
 	}
 
-	// Generate new access token
+	// Rotate: validates + revokes old session, returns old session for lineage
+	oldSession, err := s.sessions.RotateSession(input.RefreshToken, uint(userID))
+	if err != nil {
+		if errors.Is(err, ErrTokenReuse) {
+			// Reuse detected — all sessions already revoked inside RotateSession.
+			// Return a clear error; handler should clear the cookie.
+			return nil, "", ErrTokenReuse
+		}
+		return nil, "", errors.New("invalid or expired session")
+	}
+
+	// Issue new tokens
 	accessToken, err := middleware.GenerateJWT(uint(userID), cfg.JWTSecret, cfg.JWTExpiry)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w", err)
+		return nil, "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	newRefreshToken, err := middleware.GenerateRefreshToken(uint(userID), cfg.RefreshSecret, cfg.RefreshExpiry)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	// Persist new session with rotation lineage
+	expiresAt := time.Now().Add(cfg.RefreshExpiry)
+	if _, err = s.sessions.CreateSession(uint(userID), newRefreshToken, input.DeviceInfo, input.IPAddress, expiresAt, &oldSession.ID); err != nil {
+		return nil, "", fmt.Errorf("failed to persist new session: %w", err)
 	}
 
 	return &RefreshOutput{
 		AccessToken: accessToken,
 		ExpiresIn:   int(cfg.JWTExpiry.Seconds()),
-	}, nil
+	}, newRefreshToken, nil
 }
 
-// Helper functions
+/* ── Helpers ────────────────────────────────────────────────────── */
 
 func isValidUsername(username string) bool {
 	if len(username) < 3 || len(username) > 15 {
@@ -301,13 +332,14 @@ func decodeHex(s string) ([]byte, error) {
 		for j := 0; j < 2; j++ {
 			var d byte
 			c := s[i+j]
-			if c >= '0' && c <= '9' {
+			switch {
+			case c >= '0' && c <= '9':
 				d = c - '0'
-			} else if c >= 'a' && c <= 'f' {
+			case c >= 'a' && c <= 'f':
 				d = c - 'a' + 10
-			} else if c >= 'A' && c <= 'F' {
+			case c >= 'A' && c <= 'F':
 				d = c - 'A' + 10
-			} else {
+			default:
 				return nil, errors.New("invalid hex character")
 			}
 			value = (value << 4) | d

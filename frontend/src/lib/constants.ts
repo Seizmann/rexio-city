@@ -8,9 +8,13 @@
 
 export const API = {
   // Auth
-  AUTH_SIGNUP: '/api/auth/signup',
-  AUTH_LOGIN: '/api/auth/login',
-  AUTH_REFRESH: '/api/auth/refresh',
+  AUTH_SIGNUP:      '/api/auth/signup',
+  AUTH_LOGIN:       '/api/auth/login',
+  AUTH_REFRESH:     '/api/auth/refresh',
+  AUTH_LOGOUT:      '/api/auth/logout',
+  AUTH_LOGOUT_ALL:  '/api/auth/logout-all',
+  AUTH_SESSIONS:    '/api/auth/sessions',
+  AUTH_SESSION_REVOKE: (id: number) => `/api/auth/sessions/${id}/revoke`,
 
   // Users
   USERS_ME: '/api/users/me',

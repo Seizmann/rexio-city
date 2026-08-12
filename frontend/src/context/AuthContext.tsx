@@ -2,8 +2,14 @@
 
 /**
  * Auth context for RexiO City.
- * Manages JWT token lifecycle, user state, and provides login/signup/logout
- * functions to the entire app via React Context.
+ *
+ * Post-security-migration design:
+ *   - access_token lives ONLY in the api.ts module memory (_accessToken variable).
+ *   - refresh_token is NEVER accessible here or anywhere in JS (httpOnly cookie).
+ *   - On mount, we call attemptTokenRefresh() silently; if it succeeds we have a
+ *     valid access token in memory and can fetch the user profile.
+ *   - User profile is cached in localStorage (non-sensitive, safe to store).
+ *   - logout() calls the server to revoke the session + clears local state.
  */
 
 import {
@@ -16,14 +22,16 @@ import {
 } from 'react';
 import type { User } from '@/lib/types';
 import {
+  attemptTokenRefresh,
+  setAccessToken,
+  api,
   apiLogin,
   apiSignup,
-  api,
-  getAccessToken,
-  setTokens,
-  clearTokens,
+  apiLogout,
+  apiLogoutAll,
   setStoredUser,
   getStoredUser,
+  clearStoredUser,
 } from '@/lib/api';
 import { API } from '@/lib/constants';
 
@@ -36,14 +44,10 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  signup: (data: {
-    username: string;
-    email: string;
-    password: string;
-    display_name: string;
-  }) => Promise<void>;
-  logout: () => void;
+  login:   (email: string, password: string) => Promise<void>;
+  signup:  (data: { username: string; email: string; password: string; display_name: string }) => Promise<void>;
+  logout:  () => Promise<void>;
+  logoutAll: () => Promise<void>;
   /** Update the cached user object (e.g. after profile edit). */
   setUser: (user: User) => void;
 }
@@ -59,79 +63,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
   });
 
-  // Hydrate auth state on mount (client-side only)
+  /**
+   * On mount: attempt a silent refresh to re-hydrate the access token from
+   * the httpOnly cookie. Show cached user immediately to avoid flash of
+   * "not logged in" while the refresh is in flight.
+   */
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
-      void Promise.resolve().then(() => {
-        setState({ user: null, isLoading: false, isAuthenticated: false });
-      });
-      return;
-    }
-
     const cached = getStoredUser() as User | null;
 
-    api
-      .get<User>(API.USERS_ME)
-      .then((res) => {
-        if (res.success && res.data) {
-          setStoredUser(res.data);
-          setState({ user: res.data, isLoading: false, isAuthenticated: true });
-        } else {
-          clearTokens();
-          setState({ user: null, isLoading: false, isAuthenticated: false });
-        }
-      })
-      .catch(() => {
-        if (cached) {
-          setState({ user: cached, isLoading: false, isAuthenticated: true });
-        } else {
-          clearTokens();
-          setState({ user: null, isLoading: false, isAuthenticated: false });
-        }
-      });
+    void attemptTokenRefresh().then((refreshed) => {
+      if (!refreshed) {
+        // No valid refresh cookie — user is logged out
+        clearStoredUser();
+        setState({ user: null, isLoading: false, isAuthenticated: false });
+        return;
+      }
+
+      // Refresh succeeded: fetch up-to-date profile
+      void api
+        .get<User>(API.USERS_ME)
+        .then((res) => {
+          if (res.success && res.data) {
+            setStoredUser(res.data);
+            setState({ user: res.data, isLoading: false, isAuthenticated: true });
+          } else {
+            clearStoredUser();
+            setState({ user: null, isLoading: false, isAuthenticated: false });
+          }
+        })
+        .catch(() => {
+          // Network error — trust cached user if we have one
+          if (cached) {
+            setState({ user: cached, isLoading: false, isAuthenticated: true });
+          } else {
+            setState({ user: null, isLoading: false, isAuthenticated: false });
+          }
+        });
+    });
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiLogin({ email, password });
     if (res.success && res.data) {
-      setTokens(res.data.access_token, res.data.refresh_token);
+      // access_token goes into memory via api.ts; refresh token is set as
+      // httpOnly cookie by the backend — we never see it here.
+      setAccessToken(res.data.access_token);
       setStoredUser(res.data.user);
-      setState({
-        user: res.data.user,
-        isLoading: false,
-        isAuthenticated: true,
-      });
+      setState({ user: res.data.user, isLoading: false, isAuthenticated: true });
     } else {
-      throw new Error(res.error?.message || 'Login failed');
+      throw new Error(res.error?.message ?? 'Login failed');
     }
   }, []);
 
-  const signup = useCallback(
-    async (data: {
-      username: string;
-      email: string;
-      password: string;
-      display_name: string;
-    }) => {
-      const res = await apiSignup(data);
-      if (res.success && res.data) {
-        setTokens(res.data.access_token, res.data.refresh_token);
-        setStoredUser(res.data.user);
-        setState({
-          user: res.data.user,
-          isLoading: false,
-          isAuthenticated: true,
-        });
-      } else {
-        throw new Error(res.error?.message || 'Signup failed');
-      }
-    },
-    [],
-  );
+  const signup = useCallback(async (data: {
+    username: string;
+    email: string;
+    password: string;
+    display_name: string;
+  }) => {
+    const res = await apiSignup(data);
+    if (res.success && res.data) {
+      setAccessToken(res.data.access_token);
+      setStoredUser(res.data.user);
+      setState({ user: res.data.user, isLoading: false, isAuthenticated: true });
+    } else {
+      throw new Error(res.error?.message ?? 'Signup failed');
+    }
+  }, []);
 
-  const logout = useCallback(() => {
-    clearTokens();
+  const logout = useCallback(async () => {
+    // Server revokes the session and clears the httpOnly cookie.
+    // apiLogout() also clears the in-memory token and cached user.
+    await apiLogout();
+    setState({ user: null, isLoading: false, isAuthenticated: false });
+  }, []);
+
+  const logoutAll = useCallback(async () => {
+    await apiLogoutAll();
     setState({ user: null, isLoading: false, isAuthenticated: false });
   }, []);
 
@@ -141,9 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{ ...state, login, signup, logout, setUser }}
-    >
+    <AuthContext.Provider value={{ ...state, login, signup, logout, logoutAll, setUser }}>
       {children}
     </AuthContext.Provider>
   );

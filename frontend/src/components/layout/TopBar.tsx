@@ -75,7 +75,7 @@ export default function TopBar() {
                 role="menuitem"
                 onClick={() => {
                   setDropdownOpen(false);
-                  logout();
+                  void logout();
                 }}
               >
                 Log out
