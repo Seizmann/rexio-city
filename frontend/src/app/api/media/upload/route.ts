@@ -38,16 +38,13 @@ export async function POST(request: NextRequest) {
     const cookie = request.headers.get('Cookie');
     if (cookie) forwardHeaders.set('Cookie', cookie);
 
-    // Stream the raw request body directly to the Go backend.
-    // request.body is a ReadableStream; passing it avoids buffering the whole
-    // file in memory, which matters for videos up to 500 MB.
+    // Read binary body as ArrayBuffer to avoid NextRequest stream locking issues in Node.js
+    const bodyBuffer = await request.arrayBuffer();
+
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
-      // Forward the raw body stream (multipart/form-data) including boundary
-      body: request.body,
-      // @ts-expect-error — duplex is required for streaming bodies in Node.js fetch
-      duplex: 'half',
+      body: bodyBuffer,
     });
 
     const responseHeaders = new Headers();

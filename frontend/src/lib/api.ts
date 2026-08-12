@@ -260,12 +260,31 @@ export const api = {
     if (csrf) {
       headers['X-CSRF-Token'] = csrf;
     }
-    const response = await fetch(path, {
+    let response = await fetch(path, {
       method: 'POST',
       headers,
       body: formData,
       credentials: 'include',
     });
+
+    if (response.status === 401) {
+      const refreshed = await attemptTokenRefresh();
+      if (refreshed) {
+        const retryHeaders: Record<string, string> = {};
+        const newToken = getAccessToken();
+        if (newToken) retryHeaders['Authorization'] = `Bearer ${newToken}`;
+        const newCsrf = getCSRFToken();
+        if (newCsrf) retryHeaders['X-CSRF-Token'] = newCsrf;
+
+        response = await fetch(path, {
+          method: 'POST',
+          headers: retryHeaders,
+          body: formData,
+          credentials: 'include',
+        });
+      }
+    }
+
     return response.json() as Promise<APIResponse<T>>;
   },
 };
