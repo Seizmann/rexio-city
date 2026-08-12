@@ -75,8 +75,8 @@ rexio-city/
 | Frontend (Next.js) | Dev preview | dev-city.rexio.pro |
 | Admin (Vite) | Production | oppscity.rexio.pro |
 | Admin (Vite) | Local dev | localhost:5189 |
-| Backend (main) | Dev (Cloudflare Tunnel) | dev-connect2city.spritexai.dpdns.org |
-| Backend (main) | Production (future VPS) | connect2city.spritexai.dpdns.org |
+|| Backend (main) | Dev (Cloudflare Tunnel) | devv-connect2city.citydev.rexio.pro |
+|| Backend (main) | Production (future VPS) | connect2city.spritexai.dpdns.org |
 | Media/CDN | All | cdn-city.rexio.pro |
 
 ### Deployment Targets
@@ -90,7 +90,7 @@ Preview:    https://dev-city.rexio.pro
 Production: https://oppscity.rexio.pro
 
 # Backend (Cloudflare Tunnel)
-Dev:        https://dev-connect2city.spritexai.dpdns.org
+Dev:        https://devv-connect2city.spritexai.dpdns.org
 Production: https://connect2city.spritexai.dpdns.org
 
 # Media CDN
@@ -248,8 +248,8 @@ All:        https://cdn-city.rexio.pro
 
 | Service | Environment | URL |
 |---|---|---|
-| Main API | Dev | `https://dev-connect2city.spritexai.dpdns.org` |
-| Main API | Production | `https://connect2city.spritexai.dpdns.org` |
+|| Main API | Dev | `https://citydev.rexio.pro` |
+|| Main API | Production | `https://connect2city.spritexai.dpdns.org` |
 | Media CDN | All | `https://cdn-city.rexio.pro` |
 
 ### Response Format
