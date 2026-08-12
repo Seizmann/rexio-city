@@ -30,6 +30,20 @@ export default function ProfileHeader({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [localCounts, setLocalCounts] = useState(followCounts);
 
+  const followerCount =
+    localCounts.follower_count ??
+    localCounts.followers ??
+    user.follower_count ??
+    user.followers ??
+    0;
+
+  const followingCount =
+    localCounts.following_count ??
+    localCounts.following ??
+    user.following_count ??
+    user.following ??
+    0;
+
   const handleFollowToggle = async () => {
     if (loading) return;
     setLoading(true);
@@ -37,13 +51,15 @@ export default function ProfileHeader({
     // Optimistic update
     const previousState = isFollowing;
     const previousCounts = { ...localCounts };
+    const nextFollowerCount = previousState
+      ? Math.max(0, followerCount - 1)
+      : followerCount + 1;
 
     setIsFollowing(!previousState);
     setLocalCounts({
       ...localCounts,
-      follower_count: previousState
-        ? Math.max(0, localCounts.follower_count - 1)
-        : localCounts.follower_count + 1,
+      followers: nextFollowerCount,
+      follower_count: nextFollowerCount,
     });
 
     if (onFollowChange) {
@@ -83,7 +99,11 @@ export default function ProfileHeader({
     <div className={styles.header}>
       <div
         className={styles.cover}
-        style={user.cover_url ? { backgroundImage: `url(${user.cover_url})` } : undefined}
+        style={
+          user.cover_url
+            ? { backgroundImage: `url(${user.cover_url})` }
+            : undefined
+        }
       />
 
       <div className={styles.infoContainer}>
@@ -104,13 +124,18 @@ export default function ProfileHeader({
 
           <div className={styles.actionButton}>
             {isOwnProfile ? (
-              <Button variant="secondary" onClick={() => setIsEditModalOpen(true)}>
+              <Button
+                variant="secondary"
+                onClick={() => setIsEditModalOpen(true)}
+              >
                 Edit Profile
               </Button>
             ) : (
               <Button
                 variant={isFollowing ? 'secondary' : 'primary'}
-                onClick={() => { void handleFollowToggle(); }}
+                onClick={() => {
+                  void handleFollowToggle();
+                }}
                 loading={loading}
               >
                 {isFollowing ? 'Following' : 'Follow'}
@@ -121,7 +146,9 @@ export default function ProfileHeader({
 
         <div className={styles.details}>
           <div className={styles.nameRow}>
-            <h1 className={styles.displayName}>{user.display_name || user.username}</h1>
+            <h1 className={styles.displayName}>
+              {user.display_name || user.username}
+            </h1>
             <p className={styles.username}>@{user.username}</p>
           </div>
 
@@ -129,10 +156,12 @@ export default function ProfileHeader({
 
           <div className={styles.followCounts}>
             <span className={styles.countItem}>
-              <span className={styles.countValue}>{localCounts.following_count}</span> Following
+              <span className={styles.countValue}>{followingCount}</span>{' '}
+              Following
             </span>
             <span className={styles.countItem}>
-              <span className={styles.countValue}>{localCounts.follower_count}</span> Followers
+              <span className={styles.countValue}>{followerCount}</span>{' '}
+              Followers
             </span>
           </div>
         </div>

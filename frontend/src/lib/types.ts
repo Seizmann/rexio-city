@@ -13,6 +13,10 @@ export interface User {
   bio?: string;
   avatar_url?: string;
   cover_url?: string;
+  followers?: number;
+  following?: number;
+  follower_count?: number;
+  following_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -79,8 +83,10 @@ export interface LoginPayload {
 /* ── Follow ────────────────────────────────────────────────────── */
 
 export interface FollowCounts {
-  follower_count: number;
-  following_count: number;
+  follower_count?: number;
+  following_count?: number;
+  followers?: number;
+  following?: number;
 }
 
 /* ── API Response Wrapper ─────────────────────────────────────── */
