@@ -123,11 +123,21 @@ type Setting struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// RefreshToken represents a refresh token
-type RefreshToken struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    uint      `json:"user_id"`
-	Token     string    `json:"token" gorm:"uniqueIndex"`
-	ExpiresAt time.Time `json:"expires_at"`
-	CreatedAt time.Time `json:"created_at"`
+
+// Session represents a persistent refresh-token session with rotation lineage.
+// token_hash is SHA-256 of the raw refresh token — we never store the raw token.
+// parent_session_id links to the session this was rotated from, forming a chain
+// that can be fully revoked if reuse is detected.
+type Session struct {
+	ID              uint       `json:"id" gorm:"primaryKey"`
+	UserID          uint       `json:"user_id"`
+	TokenHash       string     `json:"-" gorm:"uniqueIndex;size:64"` // never expose in JSON
+	ParentSessionID *uint      `json:"parent_session_id"`
+	DeviceInfo      string     `json:"device_info"`   // User-Agent
+	IPAddress       string     `json:"ip_address"`    // client IP
+	CreatedAt       time.Time  `json:"created_at"`
+	LastUsedAt      time.Time  `json:"last_used_at"`
+	ExpiresAt       time.Time  `json:"expires_at"`
+	RevokedAt       *time.Time `json:"revoked_at"` // nil = active
 }
+

@@ -551,13 +551,14 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
-  - **Public Post Access & Supabase PublicID Migration**: Made `GET /api/posts/:id` and `GET /api/posts/:id/comments` publicly accessible for unauthenticated and authenticated visitors alike, executed DDL migration on Supabase PostgreSQL adding `public_id` column and index, and enabled dual resolution supporting both 16-character public IDs (`/post/5b56e44230f923b8`) and numeric ID fallbacks (`/post/7`).
-- Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
+  - **Default Feed Tab Change**: Updated `frontend/src/app/(main)/page.tsx` default feed tab state from `following` to `foryou` so authenticated users see the For You feed by default.
+  - **Avatar & Cover Photo Upload System**: Added full image upload flow — `EditProfileModal` updated with camera-icon file pickers for profile pic and cover photo, live local preview before save, uploads to `POST /api/media/upload` (R2/fallback local disk), then PATCHes `avatar_url`/`cover_url` to `/api/users/me`. Backend `MediaService` updated with local disk fallback (`./uploads/media/`) when R2 is unavailable, and `app.Static("/uploads", "./uploads")` registered to serve them. `ProfileHeader` updated with hover-to-edit camera overlays on own profile.
+- Passed `go vet ./...`, `npx tsc --noEmit`, and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:
 - Real-time DM UI (backend ready, UI deferred to next iteration)
 - Notifications Page UI (backend ready, UI deferred)
-- Media File Upload UI (backend ready, UI deferred)
+- Media File Upload in posts (image attachments on PostComposer — deferred)
 
 ### Notes for next agent:
 - Frontend MVP is complete and ready for deployment to Vercel / dev testing.
@@ -565,3 +566,62 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
 - Next step: Deploy/test frontend user flow (`Sign Up -> Login -> Feed -> Post -> Comment/Like -> Profile -> Logout`), then begin Phase 4 (Admin Panel).
 
 
+
+## [2026-08-13 02:18, GMT+6] — Agent: Antigravity — Model: Claude Sonnet 4.6 (Thinking)
+### Picking up:
+- Frontend MVP fully implemented and CI green (previous session).
+- CRITICAL SECURITY VIOLATION identified: `refresh_token` stored in browser `localStorage` (api.ts lines 32-33). This violates AGENTS.md §4 Rule 6 (custom auth), PRD §7 (Session: JWT + refresh token rotation), and exposes all users to session hijacking via XSS.
+- Additional bug found: `ParseRefreshToken()` in middleware/auth.go uses hardcoded `"TODO_CONFIG"` secret (line 173) — refresh token validation was completely broken.
+- Existing `RefreshToken` DB model exists but is never written to — tokens generated but not persisted.
+
+### Plan for this session:
+- SECURITY FIX: Migrate auth from LocalStorage refresh tokens → httpOnly cookie + DB-persisted sessions + rotation + reuse detection.
+- Backend: New `sessions` table, session service, httpOnly cookie on login/signup/refresh, CSRF double-submit pattern, new-device email alert, session management endpoints.
+- Frontend: Remove ALL localStorage for auth tokens, in-memory access token only, cookie-based silent refresh on mount, CSRF header on mutations, Active Sessions UI.
+- Write `_test.go` unit tests for token rotation and reuse detection.
+- CSRF approach chosen: Double-submit cookie pattern (readable `rexio_csrf` cookie + `X-CSRF-Token` header). Chosen over custom header origin-check because: (a) works across subdomains cleanly, (b) no server-side state needed, (c) standard, well-understood pattern. Documented here per AGENTS.md §9.
+- BREAKING CHANGE: All existing LocalStorage-held sessions will be invalidated after deploy. Users on existing sessions (stored in localStorage) will be logged out on next app load. This is acceptable — it's a security fix, not a regression. No users in production yet. Noted explicitly.
+- Privacy note flagged: Session/device tracking (user-agent, IP, timestamps) is new data collection. Sijan should review Privacy Policy disclosures before production launch.
+- New env vars needed: `BREVO_API_KEY`, `COOKIE_DOMAIN`, `COOKIE_SECURE` — added to .env.example, real values needed from Sijan.
+
+### Done:
+- **SECURITY FIX — httpOnly Cookie Session System (complete)**:
+  - `migrations/002_sessions_table.sql` — new sessions table with rotation lineage (parent_session_id), device_info, ip_address, revoked_at.
+  - `models/models.go` — replaced bare `RefreshToken` model with full `Session` model.
+  - `config/config.go` — added `CookieDomain`, `CookieSecure`, `CSRFSecret`, `BrevoAPIKey`, `BrevoFromEmail`, `BrevoFromName` fields.
+  - `services/session.go` — NEW: session CRUD, `RotateSession()` (marks old revoked, returns lineage), `FindActiveSession()`, `ListActiveSessions()`, `RevokeSessionByID()`, `RevokeAllSessions()`, `ErrTokenReuse` sentinel.
+  - `services/email.go` — NEW: Brevo transactional email for new-device login alerts; skips silently if BREVO_API_KEY is unset.
+  - `services/auth.go` — REWRITTEN: Signup/Login/Refresh now return raw refresh token separately (handler sets cookie), persist sessions in DB, detect new devices.
+  - `middleware/auth.go` — REWRITTEN: **Fixed TODO_CONFIG bug** in `ParseRefreshToken` (was using hardcoded secret — refresh was completely broken). Added CSRF double-submit middleware (`CSRF()`), `IssueCSRFCookie()`. CSRF approach documented in session start entry.
+  - `handlers/auth.go` — REWRITTEN: `Signup`/`Login` set httpOnly cookie + CSRF cookie; `Refresh` reads cookie (no body); added `Logout`, `ListSessions`, `RevokeSession`, `LogoutAll`.
+  - `db/db.go` — added idempotent sessions table DDL on startup; drops old refresh_tokens table.
+  - `cmd/api/main.go` — added `X-CSRF-Token` to CORS allowed headers; registered new session routes; applied CSRF middleware to protected group.
+  - `services/auth_test.go` — NEW: 4 unit tests: `TestTokenRotation`, `TestReuseDetection`, `TestSessionListing`, `TestRevokeAll`.
+  - Frontend `lib/api.ts` — REWRITTEN: removed all localStorage token storage; access token in-memory only; CSRF header on mutations; cookie-based silent refresh; `apiLogout()`/`apiLogoutAll()`.
+  - Frontend `lib/types.ts` — removed `refresh_token` from `AuthData`; added `Session` type.
+  - Frontend `lib/constants.ts` — added `AUTH_LOGOUT`, `AUTH_LOGOUT_ALL`, `AUTH_SESSIONS`, `AUTH_SESSION_REVOKE` constants.
+  - Frontend `context/AuthContext.tsx` — REWRITTEN: no localStorage for tokens; silent refresh on mount via httpOnly cookie; `logoutAll` added.
+  - Frontend `app/(main)/settings/sessions/page.tsx` — NEW: Active Sessions UI with device list, individual revoke, logout-all.
+  - `.env.example` — added `COOKIE_DOMAIN`, `COOKIE_SECURE`, `CSRF_SECRET`, `BREVO_API_KEY`, `BREVO_FROM_EMAIL`, `BREVO_FROM_NAME`.
+
+### Checks passed:
+- `go build ./...` — 0 errors
+- `go vet ./...` — 0 issues
+- `go test ./internal/services/... -run TestToken|TestReuse|TestSession|TestRevoke` — all 4 tests PASS
+- `tsc --noEmit` — 0 errors
+- `npm run lint` — 0 errors (3 pre-existing warnings, not introduced by this session)
+
+### Breaking change (explicit — per AGENTS.md §9):
+- Existing users with tokens in localStorage will be logged out on next visit. Sessions are now cookie-based. No grace period — no production users yet.
+
+### Left incomplete / blocked:
+- Privacy Policy update: new session/device tracking data (IP, user-agent) should be disclosed. Flagged for Sijan's review — not writing policy copy.
+- `golangci-lint` not run (not installed in this env). `go vet` was run instead. CI will run golangci-lint.
+
+### Notes for next agent:
+- Refresh endpoint is now `POST /api/auth/refresh` with NO body — browser sends httpOnly cookie automatically.
+- Auth endpoint responses no longer contain `refresh_token` in JSON — only `access_token` and `expires_in`.
+- CSRF: frontend must read `rexio_csrf` cookie and send as `X-CSRF-Token` header on all POST/PUT/PATCH/DELETE requests. The new api.ts handles this automatically.
+- New env vars required from Sijan before production: `CSRF_SECRET`, `BREVO_API_KEY`. Documented in `.env.example`.
+- Sessions page URL: `/settings/sessions` — not yet linked from Settings UI (settings page may not exist yet). Next agent: add link from profile dropdown or settings menu.
+- `COOKIE_SECURE=true` and `COOKIE_DOMAIN=rexio.pro` must be set in production `.env`. Dev works with defaults (empty domain, false secure).

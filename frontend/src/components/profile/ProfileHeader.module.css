@@ -11,6 +11,26 @@
   background-color: var(--bg-secondary);
   background-size: cover;
   background-position: center;
+  position: relative;
+}
+
+.coverEditable {
+  cursor: pointer;
+}
+
+.coverOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.coverEditable:hover .coverOverlay {
+  opacity: 1;
 }
 
 @media (min-width: 600px) {
@@ -44,6 +64,37 @@
   overflow: hidden;
   position: relative;
   box-sizing: border-box;
+}
+
+.avatarEditable {
+  cursor: pointer;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.avatarEditable:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.editIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: none;
 }
 
 .avatarImage {

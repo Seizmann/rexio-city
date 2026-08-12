@@ -14,7 +14,7 @@ import type { Post } from '@/lib/types';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('following');
+  const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('foryou');
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
   const [feedLoading, setFeedLoading] = useState(true);

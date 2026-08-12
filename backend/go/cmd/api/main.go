@@ -15,7 +15,7 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Initialize database
+	// Initialize database (also runs idempotent schema setup)
 	db.Init(cfg)
 	db.Migrate()
 
@@ -24,11 +24,14 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	})
 
-	// CORS — only allow frontend origin
+	// CORS — only allow the Next.js frontend origin (never "*").
+	// AllowCredentials=true is required for cookies to be sent cross-origin.
+	// X-CSRF-Token header is explicitly allowed for CSRF double-submit pattern.
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.FrontendURL,
-		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-CSRF-Token",
+		ExposeHeaders:    "Set-Cookie",
 		AllowCredentials: true,
 		MaxAge:           86400,
 	}))
@@ -36,14 +39,18 @@ func main() {
 	// Health endpoint (no auth required)
 	app.Get("/api/health", handlers.HealthHandler)
 
-	// Auth routes (no auth required)
+	// Static uploaded files
+	app.Static("/uploads", "./uploads")
+
+	// ── Auth routes (no auth required) ───────────────────────────
 	authHandler := handlers.NewAuthHandler()
 	auth := app.Group("/api/auth")
 	auth.Post("/signup", authHandler.Signup)
 	auth.Post("/login", authHandler.Login)
+	// Refresh reads the httpOnly cookie — no body params needed
 	auth.Post("/refresh", authHandler.Refresh)
 
-	// Media upload (no auth required for testing, add auth later)
+	// ── Media upload ──────────────────────────────────────────────
 	mediaHandler := handlers.NewMediaHandler(
 		cfg.MediaEndpoint,
 		cfg.MediaBucket,
@@ -54,14 +61,21 @@ func main() {
 	media := app.Group("/api/media")
 	media.Post("/upload", mediaHandler.UploadMedia)
 
-	// Public post endpoints (viewing a post & its comments is public)
+	// ── Public post endpoints (no auth required) ─────────────────
 	postHandler := handlers.NewPostHandler()
 	app.Get("/api/posts/:id", postHandler.GetPost)
 	app.Get("/api/posts/:id/comments", postHandler.GetPostComments)
 
-	// Protected routes (auth required)
+	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
+	protected.Use(middleware.CSRF(cfg.CSRFSecret))
+
+	// Session management (auth required)
+	protected.Get("/auth/sessions", authHandler.ListSessions)
+	protected.Post("/auth/sessions/:id/revoke", authHandler.RevokeSession)
+	protected.Post("/auth/logout", authHandler.Logout)
+	protected.Post("/auth/logout-all", authHandler.LogoutAll)
 
 	// User routes
 	userHandler := handlers.NewUserHandler()
@@ -70,7 +84,7 @@ func main() {
 	protected.Get("/users/:username", userHandler.GetUser)
 	protected.Get("/search", userHandler.SearchUsers)
 
-	// Protected Post routes
+	// Post routes
 	protected.Post("/posts", postHandler.CreatePost)
 	protected.Get("/posts", postHandler.ListPosts)
 	protected.Delete("/posts/:id", postHandler.DeletePost)
@@ -102,7 +116,7 @@ func main() {
 	protected.Get("/dm/conversations/:id/messages", dmHandler.GetMessages)
 	protected.Post("/dm/conversations/:id/messages", dmHandler.SendMessage)
 
-	// WebSocket for DMs
+	// WebSocket for DMs (auth via token query param or header)
 	app.Get("/ws/dm", dmHandler.ConnectWS)
 
 	// Notification routes
