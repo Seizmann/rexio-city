@@ -22,8 +22,8 @@ const BACKEND_URL =
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // Only proxy /api/* paths
-  if (!pathname.startsWith('/api/')) {
+  // Only proxy /api/* and /uploads/* paths
+  if (!pathname.startsWith('/api/') && !pathname.startsWith('/uploads/')) {
     return NextResponse.next();
   }
 
@@ -97,8 +97,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude /api/media/upload — handled by the Node.js Route Handler at
-  // app/api/media/upload/route.ts which supports large binary (file) bodies.
-  // Edge middleware cannot stream multipart uploads reliably.
-  matcher: ['/api/((?!media/upload).*)'],
+  // Proxy /api/* (except /api/media/upload handled by Node.js Route Handler) and /uploads/*
+  matcher: ['/api/((?!media/upload).*)', '/uploads/:path*'],
 };
