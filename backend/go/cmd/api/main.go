@@ -20,8 +20,9 @@ func main() {
 	db.Migrate()
 
 	app := fiber.New(fiber.Config{
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		BodyLimit:    500 * 1024 * 1024, // 500MB max request body for video uploads
 	})
 
 	// CORS — only allow the Next.js frontend origin (never "*").

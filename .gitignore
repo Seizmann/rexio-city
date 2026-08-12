@@ -46,3 +46,6 @@ coverage/
 
 # Hermes
 .hermes/
+
+# Go binaries
+backend/go/bin/

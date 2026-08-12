@@ -58,22 +58,29 @@ type UploadResult struct {
 
 // UploadMedia uploads a media file with local disk fallback if R2/S3 fails
 func (s *MediaService) UploadMedia(file multipart.File, header *multipart.FileHeader) (*UploadResult, error) {
-	// Validate file size (max 50MB)
-	maxSize := int64(50 * 1024 * 1024)
+	// Validate file size (max 500MB for video attachments)
+	maxSize := int64(500 * 1024 * 1024)
 	if header.Size > maxSize {
-		return nil, fmt.Errorf("file size exceeds 50MB limit")
+		return nil, fmt.Errorf("file size exceeds 500MB limit")
 	}
 
 	// Determine media type
 	contentType := header.Header.Get("Content-Type")
 	mediaType := s.getMediaType(contentType)
 	if mediaType == "" {
-		// Fallback for image extensions
+		// Fallback for file extensions
 		ext := strings.ToLower(filepath.Ext(header.Filename))
-		if ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".webp" || ext == ".gif" {
+		switch ext {
+		case ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg":
 			mediaType = "photo"
 			contentType = "image/" + strings.TrimPrefix(ext, ".")
-		} else {
+		case ".mp4", ".mov", ".webm", ".mkv", ".avi":
+			mediaType = "video"
+			contentType = "video/" + strings.TrimPrefix(ext, ".")
+		case ".mp3", ".wav", ".ogg", ".m4a":
+			mediaType = "voice"
+			contentType = "audio/" + strings.TrimPrefix(ext, ".")
+		default:
 			return nil, fmt.Errorf("unsupported file type: %s", contentType)
 		}
 	}

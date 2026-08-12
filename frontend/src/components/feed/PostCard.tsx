@@ -19,6 +19,11 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
   const router = useRouter();
   const [localPost, setLocalPost] = useState<Post>(post);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  const media = localPost.media || [];
+  const photos = media.filter((m) => m.media_type === 'photo');
+  const videos = media.filter((m) => m.media_type === 'video');
 
   const postIdentifier = localPost.public_id || localPost.id;
 
@@ -36,7 +41,13 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('a') || target.closest('textarea')) {
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('textarea') ||
+      target.closest('video') ||
+      target.closest(`.${styles.mediaGrid}`)
+    ) {
       return;
     }
     router.push(ROUTES.POST(postIdentifier));
@@ -117,6 +128,40 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
 
           <div className={styles.body}>{localPost.content}</div>
 
+          {/* Videos */}
+          {videos.length > 0 && (
+            <div className={styles.videoContainer}>
+              {videos.map((vid, idx) => (
+                <video
+                  key={vid.id || vid.media_url || idx}
+                  src={vid.media_url}
+                  controls
+                  preload="metadata"
+                  className={styles.postVideo}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Photos Grid */}
+          {photos.length > 0 && (
+            <div className={`${styles.mediaGrid} ${styles[`gridCount${Math.min(photos.length, 4)}`]}`}>
+              {photos.map((item, idx) => (
+                <div
+                  key={item.id || item.media_url || idx}
+                  className={styles.mediaItem}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxImage(item.media_url);
+                  }}
+                >
+                  <img src={item.media_url} alt="Attachment" className={styles.mediaImage} loading="lazy" />
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className={styles.actionRow}>
             <button
               className={`${styles.actionButton} ${localPost.is_liked ? styles.active : ''}`}
@@ -174,6 +219,26 @@ export default function PostCard({ post, onUpdate }: PostCardProps) {
         onClose={() => setIsCommentSheetOpen(false)}
         onCommentAdded={handleCommentAdded}
       />
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div className={styles.lightbox} onClick={() => setLightboxImage(null)}>
+          <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+            <img src={lightboxImage} alt="Enlarged view" className={styles.lightboxImage} />
+            <button
+              type="button"
+              className={styles.lightboxClose}
+              onClick={() => setLightboxImage(null)}
+              aria-label="Close image"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

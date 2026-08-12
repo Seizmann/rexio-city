@@ -249,4 +249,23 @@ export const api = {
 
   delete: <T>(path: string) =>
     apiFetch<T>(path, { method: 'DELETE' }),
+
+  upload: async <T>(path: string, formData: FormData): Promise<APIResponse<T>> => {
+    const headers: Record<string, string> = {};
+    const token = getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const csrf = getCSRFToken();
+    if (csrf) {
+      headers['X-CSRF-Token'] = csrf;
+    }
+    const response = await fetch(path, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+    return response.json() as Promise<APIResponse<T>>;
+  },
 };

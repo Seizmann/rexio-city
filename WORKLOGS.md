@@ -625,3 +625,61 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
 - New env vars required from Sijan before production: `CSRF_SECRET`, `BREVO_API_KEY`. Documented in `.env.example`.
 - Sessions page URL: `/settings/sessions` — not yet linked from Settings UI (settings page may not exist yet). Next agent: add link from profile dropdown or settings menu.
 - `COOKIE_SECURE=true` and `COOKIE_DOMAIN=rexio.pro` must be set in production `.env`. Dev works with defaults (empty domain, false secure).
+
+## [2026-08-13 03:28, GMT+6] — Agent: Antigravity — Model: Gemini 3.6 Flash
+### Picking up:
+- Reviewed WORKLOGS.md history: Last session implemented secure httpOnly cookie session system, CSRF protection, and session management.
+- User request: "currently just text post kora jaitse, image + video post system koro" (Currently only text posts can be made, implement image + video post system).
+- Checked PRD §5.3: Post types include Text + photos (up to 10), Text + video (max 5 min, 500MB). Media URL pattern: `cdn-city.rexio.pro/post/{random-id}.{ext}`.
+
+### Plan for this session:
+- Investigate backend media upload & post media handling (Go backend: handlers, services, models, migrations).
+- Investigate frontend post composer & feed post media rendering (Next.js frontend: PostComposer, PostCard, api clients, media upload integrations).
+- Implement media upload and attachment flow for posts in backend (support images and videos, store media_type, media_url, order_index in post_media).
+- Implement post creation UI in frontend: add image/video file pickers, media preview, upload progress/status, and payload attachment in PostComposer.
+- Implement post media display in PostCard component (image grid layout up to 10 photos, video player with custom controls/responsive layout).
+- Verify compilation, type checks, linting, and unit/integration checks.### Done:
+- **Backend Image & Video Post Support**:
+  - Updated `models.Post` to include `Media []PostMedia` with GORM CASCADE foreign key association.
+  - Updated `models.PostMedia` struct mapping `Order` to `column:order`.
+  - Updated `PostService.CreatePost` to allow media-only or text+media posts (up to 10 photos or 1 video, max 500MB), saving `post_media` items and returning preloaded `Media`.
+  - Updated `PostService.FindPostByIdentifier`, `PostService.GetPost`, `PostService.ListPosts`, and `FeedService.ListFeed` to preload `Media` and include it in `FeedPost` JSON output.
+  - Updated `MediaService.UploadMedia` to support up to 500MB uploads for video files and added extension fallbacks for photos (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.svg`), videos (`.mp4`, `.mov`, `.webm`, `.mkv`, `.avi`), and audio (`.mp3`, `.wav`, `.ogg`, `.m4a`).
+  - Configured Fiber in `cmd/api/main.go` with `BodyLimit: 500MB` and 60-second timeouts for handling large video file uploads.
+  - Added unit test `services/post_test.go` verifying post creation with media and preloading. Passed `go vet ./...` and `go test ./...`.
+
+- **Frontend Image & Video Post System**:
+  - Updated `lib/api.ts` with `api.upload` helper for handling multipart form file uploads with automatic CSRF token and auth headers.
+  - Updated `lib/types.ts` `PostMedia` interface.
+  - Built `PostComposer` media features: photo attachment picker (up to 10 photos), video attachment picker (1 video), live upload status spinner, file preview thumbnails with remove buttons, validation alerts, and disabled submit states while uploading.
+  - Implemented `PostCard` media rendering: responsive photo grid layouts for 1, 2, 3, 4, or 5+ photos; HTML5 `<video>` player with custom responsive controls; and full-screen Lightbox modal preview when clicking on images.
+  - Updated profile page `[username]/page.tsx` Media tab to filter and display user's media posts.
+  - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
+
+### Left incomplete / blocked:
+- None. Image and Video posting system is fully implemented, verified, and ready on dev branch.
+
+### Notes for next agent:
+- Posts now support: Text only (up to 500 chars), Text + photos (up to 10 images), Text + video (up to 500MB), or photos/video only.
+- Frontend media upload posts to `/api/media/upload`, gets the uploaded media URL + type, and includes them in `media_urls` and `media_types` arrays when calling `POST /api/posts`.
+- Photo clicks open an in-app Lightbox modal overlay; video elements render HTML5 controls inline in the feed.
+- All backend unit tests (`go test ./...`) and frontend checks (`tsc`, `eslint`) pass 100%.
+
+## [2026-08-13 03:31, GMT+6] — Agent: Antigravity — Model: Gemini 3.6 Flash
+### Picking up:
+- User requested: "local nackend rebuild koro" (Rebuild local backend).
+- PRD & DECISIONS.md: Backend is Go (Fiber) located at `backend/go/cmd/api` and `backend/go/cmd/admin`.
+
+### Done:
+- **Local Backend Rebuild**:
+  - Rebuilt native Go binaries: `bin/api` and `bin/admin` in `backend/go/` (passed cleanly).
+  - Started Docker container rebuild: `docker compose -f docker/docker-compose.dev.yml up -d --build backend`.
+
+### Left incomplete / blocked:
+- None. Native binaries built, Docker build initiated.
+
+### Notes for next agent:
+- Native binaries `bin/api` and `bin/admin` are freshly compiled in `backend/go/bin/`.
+- Docker service `docker-backend-1` is being rebuilt via docker compose.
+
+

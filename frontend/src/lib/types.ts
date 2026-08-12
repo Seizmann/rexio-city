@@ -44,10 +44,11 @@ export interface Post {
 }
 
 export interface PostMedia {
-  id: number;
+  id?: number;
   media_url: string;
-  media_type: string;
-  order_index: number;
+  media_type: string; // photo, video, voice
+  order?: number;
+  order_index?: number;
 }
 
 export interface Comment {

@@ -143,8 +143,19 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'media' && (
-          <div className={styles.emptyState}>
-            <p>Media posts will appear here in a future update.</p>
+          <div className={styles.feed}>
+            {posts.filter((p) => p.media && p.media.length > 0).length > 0 ? (
+              posts
+                .filter((p) => p.media && p.media.length > 0)
+                .map((post) => <PostCard key={post.id} post={post} />)
+            ) : (
+              <div className={styles.emptyState}>
+                <p>No media posts yet.</p>
+                <p className={styles.emptySub}>
+                  When @{user.username} posts photos or videos, they will show up here.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
