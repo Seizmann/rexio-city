@@ -36,6 +36,9 @@ func main() {
 	// Health endpoint (no auth required)
 	app.Get("/api/health", handlers.HealthHandler)
 
+	// Static uploaded files
+	app.Static("/uploads", "./uploads")
+
 	// Auth routes (no auth required)
 	authHandler := handlers.NewAuthHandler()
 	auth := app.Group("/api/auth")

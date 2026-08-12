@@ -98,17 +98,45 @@ export default function ProfileHeader({
   return (
     <div className={styles.header}>
       <div
-        className={styles.cover}
+        className={`${styles.cover} ${isOwnProfile ? styles.coverEditable : ''}`}
         style={
           user.cover_url
             ? { backgroundImage: `url(${user.cover_url})` }
             : undefined
         }
-      />
+        onClick={() => {
+          if (isOwnProfile) setIsEditModalOpen(true);
+        }}
+      >
+        {isOwnProfile && (
+          <div className={styles.coverOverlay}>
+            <div className={styles.editIconBtn} aria-label="Edit cover photo">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className={styles.infoContainer}>
         <div className={styles.avatarActionRow}>
-          <div className={styles.avatar}>
+          <div
+            className={`${styles.avatar} ${isOwnProfile ? styles.avatarEditable : ''}`}
+            onClick={() => {
+              if (isOwnProfile) setIsEditModalOpen(true);
+            }}
+          >
             {user.avatar_url ? (
               <img
                 src={user.avatar_url}
@@ -119,6 +147,26 @@ export default function ProfileHeader({
               <span className={styles.avatarInitials}>
                 {getInitials(user.display_name || user.username)}
               </span>
+            )}
+
+            {isOwnProfile && (
+              <div className={styles.avatarOverlay}>
+                <div className={styles.editIconBtn} aria-label="Edit avatar photo">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </div>
+              </div>
             )}
           </div>
 

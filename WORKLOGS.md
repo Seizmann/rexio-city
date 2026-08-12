@@ -552,12 +552,13 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
   - **Defensive Rendering & Unique Key Fix**: Added fallback handling for `post.user` and `comment.user` in `PostCard` and `CommentSheet`, updated `HomePage` key rendering to ensure unique keys (`post.id` or `post-idx`), and supported both `like_count`/`likes` schema variants from backend.
   - **Default Feed Tab Change**: Updated `frontend/src/app/(main)/page.tsx` default feed tab state from `following` to `foryou` so authenticated users see the For You feed by default.
-- Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
+  - **Avatar & Cover Photo Upload System**: Added full image upload flow — `EditProfileModal` updated with camera-icon file pickers for profile pic and cover photo, live local preview before save, uploads to `POST /api/media/upload` (R2/fallback local disk), then PATCHes `avatar_url`/`cover_url` to `/api/users/me`. Backend `MediaService` updated with local disk fallback (`./uploads/media/`) when R2 is unavailable, and `app.Static("/uploads", "./uploads")` registered to serve them. `ProfileHeader` updated with hover-to-edit camera overlays on own profile.
+- Passed `go vet ./...`, `npx tsc --noEmit`, and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:
 - Real-time DM UI (backend ready, UI deferred to next iteration)
 - Notifications Page UI (backend ready, UI deferred)
-- Media File Upload UI (backend ready, UI deferred)
+- Media File Upload in posts (image attachments on PostComposer — deferred)
 
 ### Notes for next agent:
 - Frontend MVP is complete and ready for deployment to Vercel / dev testing.
