@@ -256,11 +256,13 @@ func (h *PostHandler) RepostPost(c *fiber.Ctx) error {
 	postID := c.Params("id")
 
 	var req RepostRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
-		})
+	if len(c.Body()) > 0 {
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"success": false,
+				"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			})
+		}
 	}
 
 	result, err := h.postService.RepostPost(postID, userID, req.Comment)
