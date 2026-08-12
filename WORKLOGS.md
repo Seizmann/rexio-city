@@ -550,6 +550,7 @@ GET  /api/dm/conversations/:id/typing   — Get typing users
   - **Landing Auth Screen on `/`**: Added `LandingAuth` component so when unauthenticated users visit `/` directly, they see a Twitter/X style landing hero + inline Log in / Sign up form without needing a redirect delay.
   - **Route Fix**: Removed duplicate initial scaffold file `frontend/src/app/page.tsx` which was overriding `(main)/page.tsx` and preventing the Auth/Feed page from rendering on `/`.
   - **CORS Fix**: Removed wildcard CORS headers from `next.config.ts` and `middleware.ts` to strictly comply with AGENTS.md D1 & Rule 4.5.
+  - **Backend 408 Timeout Fix**: Fixed `ReadTimeout` and `WriteTimeout` in `backend/go/cmd/api/main.go` which were set to `10 * 1000` (10 microseconds) instead of `10 * time.Second`, causing Fiber to immediately drop all HTTP requests with 408 Request Timeout.
 - Passed `npx tsc --noEmit` and `npm run lint` with 0 errors.
 
 ### Left incomplete / blocked:
