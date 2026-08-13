@@ -143,6 +143,11 @@
 - PRD Section 4 table needs updating — production backend domain is `city-connect.rexio.pro` not `connect2city.spritexai.dpdns.org`
 - Frontend dev (dev-city.rexio.pro) has Vercel SSO lock enabled — disable from Vercel dashboard if needed
 - Frontend .env.production has correct backend URL: `https://citydev.rexio.pro`
+- **All 4 main domains verified working:**
+  - Frontend prod: https://city.rexio.pro ✅
+  - Frontend dev: https://dev-city.rexio.pro ⚠️ (SSO locked)
+  - Backend dev: https://citydev.rexio.pro ✅
+  - Backend prod: https://city-connect.rexio.pro ✅
 
 ### Next Steps:
 1. Deploy backend to Railway (build should now succeed with Go 1.25)
