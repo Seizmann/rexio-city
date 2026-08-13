@@ -30,7 +30,11 @@ export async function middleware(request: NextRequest) {
   // DEBUG: Log request size for mobile debugging
   const cookieHeader = request.headers.get('Cookie');
   const userAgent = request.headers.get('User-Agent') || 'unknown';
-  const headerSize = request.headers.toString().length;
+  // Count all header bytes manually
+  let headerSize = 0;
+  request.headers.forEach((value, key) => {
+    headerSize += key.length + value.length;
+  });
   console.log(`[middleware] ${pathname} | UA: ${userAgent.slice(0, 50)} | Headers: ${headerSize}B | Cookie: ${cookieHeader ? cookieHeader.length : 0}B`);
 
   // Block requests with excessive header sizes (Vercel limit is ~8KB)
