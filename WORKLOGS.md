@@ -462,3 +462,14 @@ curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rex
 - ✅ Verified `GET /api/users/me` now returns `HTTP 200 OK` with user profile object.
 - ✅ Committed fix: `274b8bc`.
 
+
+## [2026-08-13 21:40, GMT+6] — Agent: Antigravity — Model: Gemini 3.6 Flash
+### Deep-Dive Analysis & Bug Fix:
+- **Issue:** Network tab showed `GET /api/posts?user_id=6` returned valid posts, but UI rendered "No posts yet".
+- **Root Cause:** In `ProfilePage`, `posts` hook ran concurrently on mount when `user` was still `null`. Its fetcher returned `[]` (`if (!user) return []`), and `fetchWithCache` stored `setCached('posts-irin', [])` in memory. When the user object resolved a few milliseconds later, `useCachedFetch` read `[]` from cache and skipped updating the UI with actual posts.
+- **Fix:** 
+  1. Added empty key guard in `useCachedFetch` (`if (!key) return`).
+  2. Dynamically set `postsKey = user ? 'posts-user-' + user.id : ''` in `ProfilePage` so fetching and caching are strictly delayed until the user profile object is loaded.
+- ✅ Next.js frontend rebuilt and restarted on port 3800.
+- ✅ Fix committed: `a046b0f`.
+

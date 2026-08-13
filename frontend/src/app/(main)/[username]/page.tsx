@@ -46,8 +46,16 @@ export default function ProfilePage() {
     postsKey,
     async () => {
       if (!user) return [];
-      const res = await api.get<Post[]>(`${API.POSTS}?user_id=${user.id}`);
-      return res.success && res.data ? res.data : [];
+      const res = await api.get<Post[] | { data: Post[] }>(`${API.POSTS}?user_id=${user.id}`);
+      if (!res.success || !res.data) return [];
+      // Handle both raw Post[] and nested { data: Post[] } response shapes
+      if (Array.isArray(res.data)) {
+        return res.data;
+      }
+      if (typeof res.data === 'object' && 'data' in res.data && Array.isArray((res.data as { data: Post[] }).data)) {
+        return (res.data as { data: Post[] }).data;
+      }
+      return [];
     },
     {
       dependencies: [user?.id, refreshTrigger],
