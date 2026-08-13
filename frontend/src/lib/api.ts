@@ -260,6 +260,10 @@ export const api = {
     if (csrf) {
       headers['X-CSRF-Token'] = csrf;
     }
+
+    // Log the request for debugging
+    console.log('[api.upload] Starting upload:', path, 'hasToken:', !!token, 'hasCSRF:', !!csrf);
+
     let response = await fetch(path, {
       method: 'POST',
       headers,
@@ -267,9 +271,13 @@ export const api = {
       credentials: 'include',
     });
 
+    console.log('[api.upload] Response status:', response.status);
+
     if (response.status === 401) {
+      console.log('[api.upload] 401 received, attempting token refresh');
       const refreshed = await attemptTokenRefresh();
       if (refreshed) {
+        console.log('[api.upload] Token refresh succeeded, retrying');
         const retryHeaders: Record<string, string> = {};
         const newToken = getAccessToken();
         if (newToken) retryHeaders['Authorization'] = `Bearer ${newToken}`;
@@ -282,9 +290,16 @@ export const api = {
           body: formData,
           credentials: 'include',
         });
+        console.log('[api.upload] Retry response status:', response.status);
+      } else {
+        console.error('[api.upload] Token refresh failed');
       }
     }
 
-    return response.json() as Promise<APIResponse<T>>;
+    const data = await response.json() as APIResponse<T>;
+    if (!data.success && data.error) {
+      console.error('[api.upload] Upload error:', data.error);
+    }
+    return data;
   },
 };

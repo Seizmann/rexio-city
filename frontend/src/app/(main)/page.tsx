@@ -8,12 +8,14 @@ import PostComposer from '@/components/feed/PostComposer';
 import PostCard from '@/components/feed/PostCard';
 import { PostCardSkeleton } from '@/components/ui/Skeleton';
 import Button from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('foryou');
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
@@ -162,6 +164,9 @@ export default function HomePage() {
         console.error('Post creation failed:', err);
         localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
         updateStatus('error');
+        // Show user-facing error message
+        const errorMsg = err instanceof Error ? err.message : 'Failed to post. Please try again.';
+        showToast(errorMsg, 'error');
         setTimeout(() => {
           setPosts((prev) => prev.filter((p) => p._pendingKey !== pendingKey));
         }, 3000);
