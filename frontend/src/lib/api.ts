@@ -279,6 +279,12 @@ export const api = {
 
     console.log('[api.upload] Response status:', response.status);
 
+    // Check for 431 (header too large) — Vercel returns plain text, not JSON
+    if (response.status === 431) {
+      const text = await response.text();
+      throw new Error(text.includes('Request Header') ? 'Request headers too large. Please clear cookies and try again.' : text);
+    }
+
     if (response.status === 401) {
       console.log('[api.upload] 401 received, attempting token refresh');
       const refreshed = await attemptTokenRefresh();
@@ -297,6 +303,12 @@ export const api = {
           credentials: 'include',
         });
         console.log('[api.upload] Retry response status:', response.status);
+
+        // Check for 431 on retry too
+        if (response.status === 431) {
+          const text = await response.text();
+          throw new Error(text.includes('Request Header') ? 'Request headers too large. Please clear cookies and try again.' : text);
+        }
       } else {
         console.error('[api.upload] Token refresh failed');
       }
