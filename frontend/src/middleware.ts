@@ -95,12 +95,24 @@ export async function middleware(request: NextRequest) {
     // and the readable rexio_csrf cookie on login/refresh/logout responses.
     const responseHeaders = new Headers();
     responseHeaders.set('Content-Type', response.headers.get('Content-Type') || 'application/json');
-    // Forward all Set-Cookie headers (can be multiple — refresh token + CSRF cookie)
-    response.headers.forEach((value, key) => {
-      if (key.toLowerCase() === 'set-cookie') {
-        responseHeaders.append('Set-Cookie', value);
-      }
-    });
+
+    // IMPORTANT: Use getSetCookie() — NOT headers.forEach().
+    // Node.js fetch merges all Set-Cookie values into one comma-joined string when
+    // accessed via forEach/get, breaking multi-cookie responses (refresh + CSRF).
+    // getSetCookie() returns a proper string[] preserving each cookie separately.
+    //
+    // Also strip the Domain= attribute from each cookie. The Go backend sets
+    // Domain=rexio.pro (or empty = backend host). The browser must store the cookie
+    // against the frontend origin (dev-city.rexio.pro / city.rexio.pro), so we let
+    // the browser infer the domain from the response origin rather than using the
+    // backend's domain directive.
+    const setCookies = (response.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+    for (const cookie of setCookies) {
+      // Strip Domain= attribute — let browser bind cookie to frontend origin
+      const stripped = cookie.replace(/;?\s*Domain=[^;]*/gi, '');
+      responseHeaders.append('Set-Cookie', stripped);
+    }
+
     return new NextResponse(response.body, {
       status: response.status,
       headers: responseHeaders,
