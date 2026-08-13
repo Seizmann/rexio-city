@@ -33,18 +33,9 @@ export default function ProfilePage() {
     {
       dependencies: [username, refreshTrigger],
       onSuccess: (userData) => {
-        if (userData && authUser) {
-          // Fetch follow status in background
-          void api
-            .get<{ is_following: boolean }>(API.IS_FOLLOWING(userData.id))
-            .then((res) => {
-              if (res.success && res.data) {
-                setIsFollowing(res.data.is_following);
-              }
-            })
-            .catch(() => {
-              // Ignore errors
-            });
+        // Use is_following from user object if available
+        if (userData && userData.is_following !== undefined) {
+          setIsFollowing(userData.is_following);
         }
       },
     },
@@ -63,25 +54,13 @@ export default function ProfilePage() {
     },
   );
 
-  const [followCounts, setFollowCounts] = useState<FollowCounts>({
-    follower_count: 0,
-    following_count: 0,
-  });
-
-  // Fetch follow counts when user is loaded
-  useEffect(() => {
-    if (!user) return;
-    api
-      .get<FollowCounts>(API.FOLLOW_COUNTS(user.id))
-      .then((res) => {
-        if (res.success && res.data) {
-          setFollowCounts(res.data);
-        }
-      })
-      .catch(() => {
-        // Ignore errors
-      });
-  }, [user]);
+  // Use follow counts from user object (already includes follower_count and following_count)
+  const followCounts: FollowCounts = {
+    follower_count: user?.follower_count ?? user?.followers ?? 0,
+    following_count: user?.following_count ?? user?.following ?? 0,
+    followers: user?.followers ?? user?.follower_count ?? 0,
+    following: user?.following ?? user?.following_count ?? 0,
+  };
 
   const loading = userLoading || postsLoading;
 
