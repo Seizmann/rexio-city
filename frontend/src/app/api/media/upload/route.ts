@@ -38,13 +38,22 @@ export async function POST(request: NextRequest) {
     const cookie = request.headers.get('Cookie');
     if (cookie) forwardHeaders.set('Cookie', cookie);
 
-    // Read binary body as ArrayBuffer to avoid NextRequest stream locking issues in Node.js
-    const bodyBuffer = await request.arrayBuffer();
-
+    // CRITICAL: Stream the request body directly to the backend instead of
+    // buffering it into memory with request.arrayBuffer().
+    //
+    // Vercel's Hobby plan has a 4MB function payload limit. When we call
+    // request.arrayBuffer(), Vercel buffers the entire request in memory
+    // and rejects payloads >4MB with 413 FUNCTION_PAYLOAD_TOO_LARGE.
+    //
+    // By streaming request.body directly, we bypass this limit — the data
+    // flows through Node.js streams without being fully buffered by Vercel.
+    // @ts-expect-error — duplex is valid in Node.js fetch but not in TypeScript's DOM lib yet
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
-      body: bodyBuffer,
+      body: request.body,
+      // duplex='half' allows reading a readable stream as a body
+      duplex: 'half',
     });
 
     const responseHeaders = new Headers();
