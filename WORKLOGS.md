@@ -77,7 +77,15 @@
   - Media CDN: https://cdn-city.rexio.pro
 - Note: Old direct-upload endpoint (/api/media/upload) still exists for backward compatibility but is deprecated
 - PRD Section 6 domain table is stale — should be updated to reflect current domains
-- Backend Docker rebuild fails due to Go version mismatch (1.22 in Docker vs 1.25 in go.mod) — existing backend running fine
+|- Backend Docker rebuild fails due to Go version mismatch (1.22 in Docker vs 1.25 in go.mod) — existing backend running fine
+
+### FOURTH FIX — Docker Go Version:
+- Problem: Railway backend build/deploy failed
+- Error: `go.mod requires go >= 1.25 (running go 1.22.12; GOTOOLCHAIN=local)`
+- Root cause: Dockerfile used `golang:1.22-alpine` but go.mod requires Go 1.25
+- Fix: Updated Dockerfile to use `golang:1.25-alpine`
+- Commit: 053c0b7
+- Status: ✅ Fixed, Railway should now build successfully
 
 ### Files changed:
 - frontend/src/lib/compression.ts — NEW: Canvas-based image compression
