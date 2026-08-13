@@ -24,6 +24,8 @@ on:
     branches: [main]
     paths:
       - 'backend/go/**'
+  # Allow manual trigger for testing
+  workflow_dispatch:
 
 jobs:
   deploy-backend:
