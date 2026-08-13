@@ -34,3 +34,14 @@
   - Next.js: 32MB (was 1MB default)
   - Go backend: 500MB (unchanged, already sufficient)
 - Commit: 39e82a0
+
+### Tests added:
+- Added `backend/go/internal/handlers/media_test.go` with 2 tests:
+  - `TestUploadMediaBodyLimit` - verifies 35MB file exceeds 30MB limit
+  - `TestUploadMediaSmallFile` - verifies small file upload works
+- Both tests pass ✅
+
+### Verification:
+- Small image upload: ✅ works
+- Health check: ✅ healthy
+- CI: Backend tests passing, frontend building successfully
