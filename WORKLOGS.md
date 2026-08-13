@@ -24,7 +24,24 @@
 - Uses `railway link` + `railway redeploy` commands
 |- Requires Railway API token (RAILWAY_TOKEN env var)
 
-### Done:
+### Update — Secrets configured:
+- Sijan confirmed all 4 secrets are set in GitHub repo settings:
+  - RAILWAY_API_TOKEN (project-level, environment-scoped)
+  - RAILWAY_PROJECT_ID
+  - RAILWAY_SERVICE_ID
+  - RAILWAY_ENVIRONMENT_ID
+- Simplified workflow: removed `railway link` step
+- Project-scoped tokens don't need linking — token is already authorized
+- Workflow now only needs: RAILWAY_TOKEN + RAILWAY_SERVICE_ID
+- RAILWAY_PROJECT_ID and RAILWAY_ENVIRONMENT_ID secrets exist but unused in workflow
+- Scoped to main API only (`cmd/api`) — admin API (`cmd/admin`) is out of scope
+
+### Final workflow:
+- Uses `railway redeploy --service $RAILWAY_SERVICE_ID --yes`
+- Container: ghcr.io/railwayapp/cli:latest
+- No railway link step (project token handles auth)
+- Path filter: backend/go/**
+- Commit: 0074563
 - Deleted incorrect workflow file (webhook approach)
 - Created new workflow using Railway CLI (`railway redeploy`)
 - Uses container: ghcr.io/railwayapp/cli:latest

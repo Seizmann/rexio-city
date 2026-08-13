@@ -1,28 +1,21 @@
 # GitHub Actions CD Workflow
-# Deploys the Go backend to Railway when main branch is updated
+# Deploys the main backend API (cmd/api) to Railway when main branch is updated
 #
 # WHY: Railway does NOT have an incoming deploy webhook URL that can be
-# POSTed to trigger a redeploy. The previous attempt used a non-existent
-# "Deploy Webhook URL" which was actually an outgoing webhook (for
-# notifications only). The correct approach is to use the Railway CLI
-# with an API token to trigger deployment.
+# POSTed to trigger a redeploy. The correct approach is to use the Railway
+# CLI with a project-scoped API token.
 #
 # This workflow:
 # 1. Checks out the code
-# 2. Links to the Railway project using the API token
-# 3. Triggers a redeploy of the specified service
+# 2. Uses the Railway CLI to redeploy the specified service
+#
+# The RAILWAY_API_TOKEN secret is a project-level token scoped to the
+# production environment, so no `railway link` step is needed — the token
+# is already authorized for this project/environment.
 #
 # Required GitHub secrets:
-# - RAILWAY_API_TOKEN: Project-level API token from Railway dashboard
-# - RAILWAY_PROJECT_ID: Railway project ID
-# - RAILWAY_SERVICE_ID: Railway service ID for the backend
-# - RAILWAY_ENVIRONMENT_ID: Railway environment ID (production)
-#
-# To get these values:
-# 1. Railway API Token: Railway Dashboard → Account Settings → API Tokens
-# 2. Project ID: Railway Dashboard → Your Project → Settings → General
-# 3. Service ID: Railway Dashboard → Your Service → Settings → General
-# 4. Environment ID: Railway Dashboard → Your Service → Environments
+# - RAILWAY_API_TOKEN: Project-level token (environment-scoped)
+# - RAILWAY_SERVICE_ID: Railway service ID for the main API backend
 
 name: CD - Deploy Backend to Railway
 
@@ -39,15 +32,10 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
-      RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Link to Railway project
-        run: railway link --project $RAILWAY_PROJECT_ID --environment $RAILWAY_ENVIRONMENT_ID --json
-
-      - name: Redeploy service
+      - name: Redeploy main API service
         run: railway redeploy --service $RAILWAY_SERVICE_ID --yes
