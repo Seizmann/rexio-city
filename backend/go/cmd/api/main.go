@@ -76,6 +76,8 @@ func main() {
 	followHandler := handlers.NewFollowHandler()
 	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
 	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
+	app.Get("/api/users/:id/following", followHandler.GetFollowing)
 
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
@@ -110,12 +112,10 @@ func main() {
 	feedHandler := handlers.NewFeedHandler()
 	protected.Get("/feed", feedHandler.ListFeed)
 
-	// Follow routes (auth required for mutations, but GET follow-counts and is-following are public)
-	// Note: GetFollowCounts and IsFollowing are already registered above as public routes.
+	// Follow routes (auth required for mutations, but GET follow-lists are public)
+	// Note: GetFollowers and GetFollowing are already registered above as public routes.
 	protected.Post("/users/:id/follow", followHandler.FollowUser)
 	protected.Delete("/users/:id/follow", followHandler.UnfollowUser)
-	protected.Get("/users/:id/followers", followHandler.GetFollowers)
-	protected.Get("/users/:id/following", followHandler.GetFollowing)
 
 	// DM routes
 	dmHandler := handlers.NewDMHandler()
