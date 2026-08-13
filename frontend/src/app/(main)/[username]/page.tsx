@@ -42,7 +42,7 @@ export default function ProfilePage() {
   );
   // Direct fetch for user posts when user object resolves
   const [posts, setPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
 
   useEffect(() => {
     const userId = user?.id;
@@ -79,6 +79,7 @@ export default function ProfilePage() {
       isSubscribed = false;
     };
   }, [user?.id, refreshTrigger]);
+
   // Use follow counts from user object (already includes follower_count and following_count)
   const followCounts: FollowCounts = {
     follower_count: user?.follower_count ?? user?.followers ?? 0,
@@ -87,13 +88,11 @@ export default function ProfilePage() {
     following: user?.following ?? user?.following_count ?? 0,
   };
 
-  const loading = userLoading || postsLoading;
-
   function handleEditProfile() {
     setRefreshTrigger((prev) => prev + 1);
   }
 
-  if (loading) {
+  if (userLoading) {
     return (
       <div className={styles.container}>
         <PostCardSkeleton />
@@ -128,7 +127,12 @@ export default function ProfilePage() {
       <div className={styles.content}>
         {activeTab === 'posts' && (
           <div className={styles.feed}>
-            {posts && posts.length > 0 ? (
+            {postsLoading ? (
+              <>
+                <PostCardSkeleton />
+                <PostCardSkeleton />
+              </>
+            ) : posts && posts.length > 0 ? (
               posts.map((post) => <PostCard key={post.id} post={post} />)
             ) : (
               <div className={styles.emptyState}>
