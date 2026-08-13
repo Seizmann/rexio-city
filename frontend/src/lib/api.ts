@@ -81,6 +81,31 @@ let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
 /**
+ * Safely parse JSON response. Handles non-JSON responses (e.g., 413, 431, 500)
+ * that Vercel/Cloudflare may return as plain text instead of JSON.
+ */
+async function parseJSONResponse<T>(response: Response): Promise<APIResponse<T>> {
+  const contentType = response.headers.get('content-type') || '';
+
+  // If response is not JSON, read as text and throw a user-friendly error
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    const errorMessage = text.includes('Entity')
+      ? 'File too large. Please compress your photo and try again.'
+      : text.includes('Header')
+        ? 'Request headers too large. Please refresh the page and try again.'
+        : text || `Server error (${response.status})`;
+    throw new Error(errorMessage);
+  }
+
+  try {
+    return await response.json() as APIResponse<T>;
+  } catch {
+    throw new Error(`Invalid JSON response from server (${response.status})`);
+  }
+}
+
+/**
  * Low-level fetch wrapper. Attaches auth Bearer header, attaches CSRF token
  * on mutating requests, parses JSON response, and attempts a single silent
  * token refresh on 401 before giving up.
@@ -143,14 +168,14 @@ async function apiFetch<T>(
         headers: retryHeaders,
         credentials: 'include',
       });
-      return retryResponse.json() as Promise<APIResponse<T>>;
+      return parseJSONResponse<T>(retryResponse);
     }
     // Refresh failed — clear in-memory token and cached user
     setAccessToken(null);
     clearStoredUser();
   }
 
-  return response.json() as Promise<APIResponse<T>>;
+  return parseJSONResponse<T>(response);
 }
 
 /**
@@ -316,10 +341,6 @@ export const api = {
       }
     }
 
-    const data = await response.json() as APIResponse<T>;
-    if (!data.success && data.error) {
-      console.error('[api.upload] Upload error:', data.error);
-    }
-    return data;
+    return parseJSONResponse<T>(response);
   },
 };

@@ -64,12 +64,26 @@ export async function POST(request: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
+    // Handle body size limit errors from Next.js
+    const message = error instanceof Error ? error.message : 'Upload failed';
+    if (message.includes('body') || message.includes('size') || message.includes('limit')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'FILE_TOO_LARGE',
+            message: 'File is too large — max 30MB allowed. Please compress your photo and try again.',
+          },
+        },
+        { status: 413 },
+      );
+    }
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'UPLOAD_PROXY_ERROR',
-          message: error instanceof Error ? error.message : 'Upload proxy failed',
+          message: message,
         },
       },
       { status: 502 },
