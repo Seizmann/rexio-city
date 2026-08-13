@@ -33,6 +33,7 @@ import {
   getStoredUser,
   clearStoredUser,
 } from '@/lib/api';
+import { clearCache } from '@/lib/cache';
 import { API } from '@/lib/constants';
 
 /* ── Context Types ────────────────────────────────────────────── */
@@ -109,6 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // httpOnly cookie by the backend — we never see it here.
       setAccessToken(res.data.access_token);
       setStoredUser(res.data.user);
+      // Clear cache on login so fresh data is fetched
+      clearCache();
       setState({ user: res.data.user, isLoading: false, isAuthenticated: true });
     } else {
       throw new Error(res.error?.message ?? 'Login failed');
@@ -125,6 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.success && res.data) {
       setAccessToken(res.data.access_token);
       setStoredUser(res.data.user);
+      // Clear cache on signup so fresh data is fetched
+      clearCache();
       setState({ user: res.data.user, isLoading: false, isAuthenticated: true });
     } else {
       throw new Error(res.error?.message ?? 'Signup failed');
@@ -135,11 +140,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Server revokes the session and clears the httpOnly cookie.
     // apiLogout() also clears the in-memory token and cached user.
     await apiLogout();
+    clearCache();
     setState({ user: null, isLoading: false, isAuthenticated: false });
   }, []);
 
   const logoutAll = useCallback(async () => {
     await apiLogoutAll();
+    clearCache();
     setState({ user: null, isLoading: false, isAuthenticated: false });
   }, []);
 
