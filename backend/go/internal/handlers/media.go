@@ -23,7 +23,7 @@ func (h *MediaHandler) UploadMedia(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "File is required"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "File is required"},
 		})
 	}
 
@@ -31,7 +31,7 @@ func (h *MediaHandler) UploadMedia(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "UPLOAD_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "UPLOAD_ERROR", "message": err.Error()},
 		})
 	}
 	defer f.Close()
@@ -40,12 +40,12 @@ func (h *MediaHandler) UploadMedia(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "UPLOAD_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "UPLOAD_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
