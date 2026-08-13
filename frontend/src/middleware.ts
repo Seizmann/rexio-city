@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent') || 'unknown';
   // Count all header bytes manually
   let headerSize = 0;
-  const headerPairs = [];
+  const headerPairs: string[] = [];
   request.headers.forEach((value, key) => {
     headerSize += key.length + value.length;
     headerPairs.push(`${key}: ${value.slice(0, 50)}...`);
