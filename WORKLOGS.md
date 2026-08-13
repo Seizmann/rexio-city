@@ -452,3 +452,13 @@ curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rex
 ### Left incomplete:
 - Push commits to `dev` (waiting for user confirmation per AGENTS.md D10).
 
+
+## [2026-08-13 21:30, GMT+6] — Agent: Antigravity — Model: Gemini 3.6 Flash
+### Root Cause Identified & Resolved:
+- **Issue:** Refreshing page logged user out every time despite token refresh succeeding.
+- **Root Cause:** Go Fiber router registered `app.Get("/api/users/:username")` *before* `protected.Get("/users/me")`. When `AuthContext` called `GET /api/users/me` after obtaining the access token, Go Fiber matched `"me"` as a username parameter and queried DB for username `"me"`, returning `404 Not Found`. `AuthContext` caught this 404, cleared local state, and set `isAuthenticated: false`.
+- **Fix:** Moved `protected.Get("/users/me")` above `app.Get("/api/users/:username")` in `backend/go/cmd/api/main.go`.
+- ✅ Rebuilt and restarted backend Docker container.
+- ✅ Verified `GET /api/users/me` now returns `HTTP 200 OK` with user profile object.
+- ✅ Committed fix: `274b8bc`.
+

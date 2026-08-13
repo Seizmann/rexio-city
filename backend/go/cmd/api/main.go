@@ -66,6 +66,7 @@ func main() {
 
 	// ── Public post endpoints (no auth required) ─────────────────
 	postHandler := handlers.NewPostHandler()
+	app.Get("/api/posts", postHandler.ListPosts)
 	app.Get("/api/posts/:id", postHandler.GetPost)
 	app.Get("/api/posts/:id/comments", postHandler.GetPostComments)
 
@@ -98,7 +99,6 @@ func main() {
 
 	// Post routes
 	protected.Post("/posts", postHandler.CreatePost)
-	protected.Get("/posts", postHandler.ListPosts)
 	protected.Delete("/posts/:id", postHandler.DeletePost)
 	protected.Post("/posts/:id/like", postHandler.LikePost)
 	protected.Delete("/posts/:id/like", postHandler.UnlikePost)
