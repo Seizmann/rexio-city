@@ -1,36 +1,53 @@
 # GitHub Actions CD Workflow
-# Triggers Railway redeploy when main branch is updated
+# Deploys the Go backend to Railway when main branch is updated
 #
-# This workflow runs when code is pushed to main (after a PR merge).
-# It sends a POST request to Railway's Deploy Webhook URL to trigger
-# a new deployment of the backend service.
+# WHY: Railway does NOT have an incoming deploy webhook URL that can be
+# POSTed to trigger a redeploy. The previous attempt used a non-existent
+# "Deploy Webhook URL" which was actually an outgoing webhook (for
+# notifications only). The correct approach is to use the Railway CLI
+# with an API token to trigger deployment.
 #
-# The webhook URL is stored as a GitHub Actions repository secret
-# named RAILWAY_DEPLOY_WEBHOOK_URL.
+# This workflow:
+# 1. Checks out the code
+# 2. Links to the Railway project using the API token
+# 3. Triggers a redeploy of the specified service
 #
-# Path filtering is enabled to only trigger when backend code changes.
-# This avoids unnecessary deploys when only frontend or docs change.
+# Required GitHub secrets:
+# - RAILWAY_API_TOKEN: Project-level API token from Railway dashboard
+# - RAILWAY_PROJECT_ID: Railway project ID
+# - RAILWAY_SERVICE_ID: Railway service ID for the backend
+# - RAILWAY_ENVIRONMENT_ID: Railway environment ID (production)
+#
+# To get these values:
+# 1. Railway API Token: Railway Dashboard → Account Settings → API Tokens
+# 2. Project ID: Railway Dashboard → Your Project → Settings → General
+# 3. Service ID: Railway Dashboard → Your Service → Settings → General
+# 4. Environment ID: Railway Dashboard → Your Service → Environments
 
-name: CD - Deploy to Railway
+name: CD - Deploy Backend to Railway
 
 on:
   push:
     branches: [main]
     paths:
       - 'backend/go/**'
-      - 'backend/go/cmd/api/**'
-      - 'backend/go/cmd/admin/**'
-      - 'backend/go/internal/**'
-      - 'backend/go/migrations/**'
 
 jobs:
   deploy-backend:
-    name: Trigger Railway Deploy
+    name: Deploy to Railway
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+      RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
     steps:
-      - name: Deploy to Railway
-        run: |
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"deploy": true}' \
-            "${{ secrets.RAILWAY_DEPLOY_WEBHOOK_URL }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Link to Railway project
+        run: railway link --project $RAILWAY_PROJECT_ID --environment $RAILWAY_ENVIRONMENT_ID --json
+
+      - name: Redeploy service
+        run: railway redeploy --service $RAILWAY_SERVICE_ID --yes

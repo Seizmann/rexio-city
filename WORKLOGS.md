@@ -6,35 +6,64 @@
 - PRD Section 4 shows two backend domains: `citydev.rexio.pro` (dev) and `city-connect.rexio.pro` (prod)
 - Railway webhook URL required — cannot be guessed
 
+### Previous session notes:
+- Created `.github/workflows/cd-main.yml` using incorrect "Railway Deploy Webhook URL" approach
+- This was based on wrong assumption that Railway has an incoming webhook for deployments
+- Railway's Settings → Webhooks is an OUTGOING webhook (notifications only), not for triggering deploys
+
 ### Plan for this session:
-1. Read existing CI workflow to understand conventions
-2. Create `.github/workflows/cd-main.yml` for CD on main branch
-3. Use GitHub Actions secret for Railway webhook URL
-4. Ask Sijan for webhook URL and secret name confirmation
+1. Delete the incorrect workflow file
+2. Create new workflow using Railway CLI approach
+3. Use `railway redeploy` command with API token
+4. Ask Sijan for Railway API token, project ID, service ID, environment ID
 5. Update WORKLOGS.md
 
+### Correction applied:
+- Deleted `.github/workflows/cd-main.yml` (incorrect webhook approach)
+- Created new `.github/workflows/cd-main.yml` using Railway CLI
+- Uses `railway link` + `railway redeploy` commands
+|- Requires Railway API token (RAILWAY_TOKEN env var)
+
 ### Done:
-- Created `.github/workflows/cd-main.yml` with path filtering for backend changes
-- Workflow triggers on push to `main` branch
-- Sends POST to Railway deploy webhook using GitHub secret
-- No hardcoded URLs or secrets in workflow file
+- Deleted incorrect workflow file (webhook approach)
+- Created new workflow using Railway CLI (`railway redeploy`)
+- Uses container: ghcr.io/railwayapp/cli:latest
+- Path filtering: `backend/go/**`
+- No hardcoded IDs or tokens in workflow
 
 ### Left incomplete / blocked:
-- Cannot test end-to-end until Railway webhook URL is provided
-- Need confirmation on which service(s) to deploy (main API, admin API, or both)
+- Cannot test end-to-end until Sijan provides:
+  1. Railway API token (project-level preferred)
+  2. Railway project ID
+  3. Railway service ID (for main API backend)
+  4. Railway environment ID (production)
+- Need confirmation: which backend service? (main API `cmd/api` or admin API `cmd/admin` or both)
 
 ### Questions for Sijan:
-1. What is the exact Railway Deploy Webhook URL for the main backend service?
-   - (Found in Railway dashboard → service → Settings → Deploy Triggers)
-2. Should this workflow deploy:
-   - Only the main API (`cmd/api`) → one webhook
-   - Only the admin API (`cmd/admin`) → separate webhook
-   - Both services → two webhooks/secrets
-3. What secret name should be used? (Current: `RAILWAY_DEPLOY_WEBHOOK_URL`)
-4. Should there be a separate workflow for admin backend?
+1. **Railway API Token** — Create project-level token (not account-level) at:
+   Railway Dashboard → Account Settings → API Tokens → Create Token
+   Scope: Project-level, read/write for the RexiO City project only
+
+2. **Railway Project ID** — Found at:
+   Railway Dashboard → RexiO City project → Settings → General → Project ID
+
+3. **Railway Service ID** — Found at:
+   Railway Dashboard → Your backend service → Settings → General → Service ID
+   (Which service? main API or admin API? Or both?)
+
+4. **Railway Environment ID** — Found at:
+   Railway Dashboard → Your service → Environments → production → Environment ID
+
+5. **Secret names** — Confirm these are OK:
+   - `RAILWAY_API_TOKEN`
+   - `RAILWAY_PROJECT_ID`
+   - `RAILWAY_SERVICE_ID`
+   - `RAILWAY_ENVIRONMENT_ID`
+
+6. **Separate workflow for admin API?** — Should there be a separate CD workflow for the admin backend (`cmd/admin`)?
 
 ### Notes for next agent:
-- Workflow file created: `.github/workflows/cd-main.yml`
-- Uses path filtering: `backend/go/**` to avoid unnecessary deploys
-- Secret name used: `RAILWAY_DEPLOY_WEBHOOK_URL`
-- Requires manual configuration of GitHub secret before it will work
+- Workflow file: `.github/workflows/cd-main.yml`
+- Approach: Railway CLI with project token (NOT webhook)
+- Command sequence: `railway link` → `railway redeploy`
+- Once Sijan provides secrets, add them to GitHub repo settings
