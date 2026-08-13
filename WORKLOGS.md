@@ -55,3 +55,8 @@
 - Fixed issue where cache stored empty data before user authentication
 - Added `clearCache()` calls on login, signup, logout, and logoutAll
 - This ensures fresh data is fetched after authentication state changes
+
+### Tertiary bug fix (2026-08-13):
+- Fixed API response type mismatch for feed endpoint
+- Backend returns `data` as `Post[]` directly, not wrapped in `{ data: Post[] }`
+- Updated type annotation in feed fetch to match actual backend response
