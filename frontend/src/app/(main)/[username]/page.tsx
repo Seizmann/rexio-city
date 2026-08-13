@@ -40,27 +40,45 @@ export default function ProfilePage() {
       },
     },
   );
-  // Use cached fetch for user posts (only when user profile is loaded)
-  const postsKey = user ? `posts-user-${user.id}` : '';
-  const { data: posts, loading: postsLoading } = useCachedFetch<Post[]>(
-    postsKey,
-    async () => {
-      if (!user) return [];
-      const res = await api.get<Post[] | { data: Post[] }>(`${API.POSTS}?user_id=${user.id}`);
-      if (!res.success || !res.data) return [];
-      // Handle both raw Post[] and nested { data: Post[] } response shapes
-      if (Array.isArray(res.data)) {
-        return res.data;
+  // Direct fetch for user posts when user object resolves
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+    let isSubscribed = true;
+
+    async function loadPosts() {
+      setPostsLoading(true);
+      try {
+        const res = await api.get<Post[] | { data: Post[] }>(`${API.POSTS}?user_id=${userId}`);
+        if (!isSubscribed) return;
+
+        if (res.success && res.data) {
+          if (Array.isArray(res.data)) {
+            setPosts(res.data);
+          } else if (typeof res.data === 'object' && 'data' in res.data && Array.isArray((res.data as { data: Post[] }).data)) {
+            setPosts((res.data as { data: Post[] }).data);
+          } else {
+            setPosts([]);
+          }
+        } else {
+          setPosts([]);
+        }
+      } catch {
+        if (isSubscribed) setPosts([]);
+      } finally {
+        if (isSubscribed) setPostsLoading(false);
       }
-      if (typeof res.data === 'object' && 'data' in res.data && Array.isArray((res.data as { data: Post[] }).data)) {
-        return (res.data as { data: Post[] }).data;
-      }
-      return [];
-    },
-    {
-      dependencies: [user?.id, refreshTrigger],
-    },
-  );
+    }
+
+    void loadPosts();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [user?.id, refreshTrigger]);
   // Use follow counts from user object (already includes follower_count and following_count)
   const followCounts: FollowCounts = {
     follower_count: user?.follower_count ?? user?.followers ?? 0,
