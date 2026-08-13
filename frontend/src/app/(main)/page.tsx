@@ -78,6 +78,7 @@ export default function HomePage() {
 
       debugLog('upload', `Starting post: ${files.length} file(s), content: ${content.slice(0, 30)}...`);
       debugLog('auth', `User: ${user?.username}, Token: ${!!getAccessToken()}`);
+      console.log('[DEBUG] === POST ATTEMPT STARTED ===');
 
       const localPreviews = files.map(({ file, type }) => ({
         previewUrl: URL.createObjectURL(file),
@@ -167,6 +168,7 @@ export default function HomePage() {
       } catch (err) {
         console.error('Post creation failed:', err);
         debugLog('error', `Post failed: ${err instanceof Error ? err.message : String(err)}`);
+        console.log('[DEBUG] === POST FAILED ===');
         localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
         updateStatus('error');
         // Show user-facing error message
