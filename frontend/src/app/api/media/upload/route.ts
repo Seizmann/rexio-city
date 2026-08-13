@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       headers: forwardHeaders,
       body: request.body,
       // @ts-expect-error — duplex is a Node.js extension not in TypeScript's DOM lib
-      duplex: 'half' as any,
+      duplex: 'half' as 'half',
     });
 
     const responseHeaders = new Headers();
