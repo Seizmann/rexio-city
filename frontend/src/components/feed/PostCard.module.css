@@ -1,15 +1,96 @@
 .card {
-  padding: var(--space-4);
   border-bottom: 1px solid var(--border);
   background-color: var(--bg);
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
 
+.row {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
 .card:hover {
   background-color: var(--bg-secondary);
+}
+
+/* Pending (uploading) post — slightly dimmed, no hover effect */
+.cardPending {
+  opacity: 0.85;
+  cursor: default;
+  pointer-events: none; /* children re-enable what they need */
+}
+
+.cardPending:hover {
+  background-color: var(--bg);
+}
+
+/* Upload status banner — sits full-width at top of card, above avatar row */
+.uploadBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--space-4);
+  background: rgba(107, 78, 94, 0.1);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--accent);
+  font-weight: 500;
+  width: 100%;
+}
+
+/* Pulsing animated dot */
+.uploadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+.uploadLabel {
+  letter-spacing: 0.01em;
+}
+
+/* Media overlay — frosted shimmer over local preview while uploading */
+.mediaUploadOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+  background-size: 200% 200%;
+  animation: shimmer 1.6s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+
+/* Slightly desaturated/blurred local preview images while uploading */
+.mediaImagePending {
+  filter: brightness(0.85) saturate(0.7);
+}
+
+/* Disabled action row while pending */
+.actionRowDisabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .avatar {
@@ -115,4 +196,129 @@
 .actionButton svg {
   width: 18px;
   height: 18px;
+}
+
+/* Media Rendering */
+.videoContainer {
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background-color: #000000;
+}
+
+.postVideo {
+  width: 100%;
+  max-height: 450px;
+  display: block;
+  object-fit: contain;
+}
+
+.mediaGrid {
+  display: grid;
+  gap: 4px;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.gridCount1 {
+  grid-template-columns: 1fr;
+}
+
+.gridCount2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.gridCount3 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.gridCount3 .mediaItem:first-child {
+  grid-row: span 2;
+}
+
+.gridCount4 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.mediaItem {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+  cursor: pointer;
+}
+
+.gridCount1 .mediaItem {
+  max-height: 450px;
+}
+
+.gridCount2 .mediaItem,
+.gridCount3 .mediaItem,
+.gridCount4 .mediaItem {
+  aspect-ratio: 16 / 9;
+}
+
+.mediaImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition-fast);
+}
+
+.mediaItem:hover .mediaImage {
+  transform: scale(1.02);
+}
+
+/* Lightbox Modal */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  backdrop-filter: blur(4px);
+}
+
+.lightboxContent {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightboxImage {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.lightboxClose {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.lightboxClose:hover {
+  background: rgba(255, 255, 255, 0.4);
 }

@@ -66,7 +66,7 @@ func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data":    result,
+		"data":    result.Post,
 	})
 }
 

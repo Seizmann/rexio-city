@@ -26,7 +26,8 @@ type Post struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at" gorm:"index"`
-	User      User       `json:"user" gorm:"foreignKey:UserID"`
+	User      User        `json:"user" gorm:"foreignKey:UserID"`
+	Media     []PostMedia `json:"media" gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
 }
 
 // PostMedia represents media attached to a post
@@ -35,7 +36,7 @@ type PostMedia struct {
 	PostID    uint      `json:"post_id"`
 	MediaURL  string    `json:"media_url"`
 	MediaType string    `json:"media_type"` // photo, video, voice
-	Order     int       `json:"order"`
+	Order     int       `json:"order" gorm:"column:order"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

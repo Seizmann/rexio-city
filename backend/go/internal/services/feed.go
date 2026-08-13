@@ -33,23 +33,24 @@ func NewFeedService() *FeedService {
 
 // FeedPost contains post data with engagement info
 type FeedPost struct {
-	ID            uint        `json:"id"`
-	PublicID      string      `json:"public_id"`
-	UserID        uint        `json:"user_id"`
-	Content       string      `json:"content"`
-	CreatedAt     time.Time   `json:"created_at"`
-	User          models.User `json:"user"`
-	Likes         int         `json:"likes"`
-	LikeCount     int         `json:"like_count"`
-	Comments      int         `json:"comments"`
-	CommentCount  int         `json:"comment_count"`
-	Reposts       int         `json:"reposts"`
-	RepostCount   int         `json:"repost_count"`
-	Bookmarks     int         `json:"bookmarks"`
-	BookmarkCount int         `json:"bookmark_count"`
-	IsLiked       bool        `json:"is_liked"`
-	IsReposted    bool        `json:"is_reposted"`
-	IsBookmarked  bool        `json:"is_bookmarked"`
+	ID            uint               `json:"id"`
+	PublicID      string             `json:"public_id"`
+	UserID        uint               `json:"user_id"`
+	Content       string             `json:"content"`
+	CreatedAt     time.Time          `json:"created_at"`
+	User          models.User        `json:"user"`
+	Media         []models.PostMedia `json:"media"`
+	Likes         int                `json:"likes"`
+	LikeCount     int                `json:"like_count"`
+	Comments      int                `json:"comments"`
+	CommentCount  int                `json:"comment_count"`
+	Reposts       int                `json:"reposts"`
+	RepostCount   int                `json:"repost_count"`
+	Bookmarks     int                `json:"bookmarks"`
+	BookmarkCount int                `json:"bookmark_count"`
+	IsLiked       bool               `json:"is_liked"`
+	IsReposted    bool               `json:"is_reposted"`
+	IsBookmarked  bool               `json:"is_bookmarked"`
 }
 
 // ListFeedInput contains feed request parameters
@@ -96,6 +97,7 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 
 	offset := (input.Page - 1) * input.PerPage
 	query.Preload("User").
+		Preload("Media").
 		Order("created_at DESC").
 		Offset(offset).
 		Limit(input.PerPage).
@@ -109,6 +111,11 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 			db.GetDB().Model(&models.Post{}).Where("id = ?", post.ID).Update("public_id", post.PublicID)
 		}
 
+		mediaList := post.Media
+		if mediaList == nil {
+			mediaList = []models.PostMedia{}
+		}
+
 		feedPost := FeedPost{
 			ID:        post.ID,
 			PublicID:  post.PublicID,
@@ -116,6 +123,7 @@ func (s *FeedService) ListFeed(input ListFeedInput) (*ListFeedOutput, error) {
 			Content:   post.Content,
 			CreatedAt: post.CreatedAt,
 			User:      post.User,
+			Media:     mediaList,
 		}
 
 		// Get engagement counts

@@ -22,8 +22,8 @@ const BACKEND_URL =
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // Only proxy /api/* paths
-  if (!pathname.startsWith('/api/')) {
+  // Only proxy /api/* and /uploads/* paths
+  if (!pathname.startsWith('/api/') && !pathname.startsWith('/uploads/')) {
     return NextResponse.next();
   }
 
@@ -31,28 +31,57 @@ export async function middleware(request: NextRequest) {
     // Build the target URL on the Go backend
     const targetUrl = `${BACKEND_URL}${pathname}${search}`;
 
-    // Forward relevant headers, but replace Host with the backend's host
+    // Forward relevant headers, but replace Host with the backend's host.
+    // Must include: Authorization (JWT), X-CSRF-Token (double-submit CSRF),
+    // Cookie (so backend can read rexio_csrf and rexio_refresh cookies).
+    // Content-Type must be forwarded as-is (multipart/form-data needs the boundary param).
     const forwardHeaders = new Headers();
-    forwardHeaders.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
+    const contentType = request.headers.get('Content-Type');
+    if (contentType) {
+      forwardHeaders.set('Content-Type', contentType);
+    }
     const authHeader = request.headers.get('Authorization');
     if (authHeader) {
       forwardHeaders.set('Authorization', authHeader);
+    }
+    const csrfHeader = request.headers.get('X-CSRF-Token');
+    if (csrfHeader) {
+      forwardHeaders.set('X-CSRF-Token', csrfHeader);
+    }
+    // Forward cookies so the Go backend can read rexio_csrf (CSRF) and
+    // rexio_refresh (refresh token rotation) cookies.
+    const cookieHeader = request.headers.get('Cookie');
+    if (cookieHeader) {
+      forwardHeaders.set('Cookie', cookieHeader);
     }
 
     const response = await fetch(targetUrl, {
       method: request.method,
       headers: forwardHeaders,
       body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+      // duplex required when streaming a request body (e.g. file uploads)
+      // @ts-expect-error — duplex is valid in Node.js fetch but not in TypeScript's DOM lib yet
+      duplex: 'half',
     });
+
 
     // Pass through the backend response without adding CORS headers.
     // The browser sees this as same-origin; no Access-Control-Allow-Origin needed.
+    // Must forward Set-Cookie so the backend can set httpOnly refresh token cookie
+    // and the readable rexio_csrf cookie on login/refresh/logout responses.
+    const responseHeaders = new Headers();
+    responseHeaders.set('Content-Type', response.headers.get('Content-Type') || 'application/json');
+    // Forward all Set-Cookie headers (can be multiple — refresh token + CSRF cookie)
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === 'set-cookie') {
+        responseHeaders.append('Set-Cookie', value);
+      }
+    });
     return new NextResponse(response.body, {
       status: response.status,
-      headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'application/json',
-      },
+      headers: responseHeaders,
     });
+
   } catch (error) {
     return NextResponse.json(
       {
@@ -68,5 +97,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  // Proxy /api/* (except /api/media/upload handled by Node.js Route Handler) and /uploads/*
+  matcher: ['/api/((?!media/upload).*)', '/uploads/:path*'],
 };

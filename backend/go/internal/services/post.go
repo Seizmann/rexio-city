@@ -73,18 +73,27 @@ func (s *PostService) FindPostByIdentifier(identifier string) (*models.Post, err
 	}
 
 	// 1. Exact match by public_id
-	if err := db.GetDB().Model(&models.Post{}).Preload("User").Where("public_id = ? AND (deleted_at IS NULL)", identifier).First(&post).Error; err == nil {
+	if err := db.GetDB().Model(&models.Post{}).Preload("User").Preload("Media").Where("public_id = ? AND (deleted_at IS NULL)", identifier).First(&post).Error; err == nil {
+		if post.Media == nil {
+			post.Media = []models.PostMedia{}
+		}
 		return &post, nil
 	}
 
 	// 2. Case-insensitive match by public_id
-	if err := db.GetDB().Model(&models.Post{}).Preload("User").Where("LOWER(public_id) = LOWER(?) AND (deleted_at IS NULL)", identifier).First(&post).Error; err == nil {
+	if err := db.GetDB().Model(&models.Post{}).Preload("User").Preload("Media").Where("LOWER(public_id) = LOWER(?) AND (deleted_at IS NULL)", identifier).First(&post).Error; err == nil {
+		if post.Media == nil {
+			post.Media = []models.PostMedia{}
+		}
 		return &post, nil
 	}
 
 	// 3. Fallback to numeric ID if identifier is digits
 	if numID, err := strconv.ParseUint(identifier, 10, 64); err == nil {
-		if err := db.GetDB().Model(&models.Post{}).Preload("User").Where("id = ? AND (deleted_at IS NULL)", uint(numID)).First(&post).Error; err == nil {
+		if err := db.GetDB().Model(&models.Post{}).Preload("User").Preload("Media").Where("id = ? AND (deleted_at IS NULL)", uint(numID)).First(&post).Error; err == nil {
+			if post.Media == nil {
+				post.Media = []models.PostMedia{}
+			}
 			return &post, nil
 		}
 	}
@@ -94,11 +103,14 @@ func (s *PostService) FindPostByIdentifier(identifier string) (*models.Post, err
 
 // CreatePost creates a new post with a 16-character random public_id
 func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, error) {
-	if len(input.Content) == 0 {
-		return nil, fmt.Errorf("post content cannot be empty")
+	if len(input.Content) == 0 && len(input.MediaURLs) == 0 {
+		return nil, fmt.Errorf("post content or media must be provided")
 	}
 	if len(input.Content) > 500 {
 		return nil, fmt.Errorf("post content cannot exceed 500 characters")
+	}
+	if len(input.MediaURLs) > 10 {
+		return nil, fmt.Errorf("maximum 10 media items allowed per post")
 	}
 
 	publicID := GenerateRandomPublicID(16)
@@ -119,10 +131,14 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 
 	// Create media entries if provided
 	for i, url := range input.MediaURLs {
+		mediaType := "photo"
+		if i < len(input.MediaTypes) && input.MediaTypes[i] != "" {
+			mediaType = input.MediaTypes[i]
+		}
 		media := models.PostMedia{
 			PostID:    post.ID,
 			MediaURL:  url,
-			MediaType: input.MediaTypes[i],
+			MediaType: mediaType,
 			Order:     i,
 			CreatedAt: time.Now(),
 		}
@@ -133,8 +149,11 @@ func (s *PostService) CreatePost(input CreatePostInput) (*CreatePostOutput, erro
 		}
 	}
 
-	// Reload post with user
-	db.GetDB().Model(&models.Post{}).Preload("User").First(&post, post.ID)
+	// Reload post with user and media
+	db.GetDB().Model(&models.Post{}).Preload("User").Preload("Media").First(&post, post.ID)
+	if post.Media == nil {
+		post.Media = []models.PostMedia{}
+	}
 
 	return &CreatePostOutput{Post: post}, nil
 }
@@ -211,6 +230,7 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 
 	offset := (input.Page - 1) * input.PerPage
 	query.Preload("User").
+		Preload("Media").
 		Order("created_at DESC").
 		Offset(offset).
 		Limit(input.PerPage).
@@ -223,6 +243,11 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 			db.GetDB().Model(&models.Post{}).Where("id = ?", post.ID).Update("public_id", post.PublicID)
 		}
 
+		mediaList := post.Media
+		if mediaList == nil {
+			mediaList = []models.PostMedia{}
+		}
+
 		feedPost := FeedPost{
 			ID:        post.ID,
 			PublicID:  post.PublicID,
@@ -230,6 +255,7 @@ func (s *PostService) ListPosts(input ListPostsInput) (*ListPostsOutput, error) 
 			Content:   post.Content,
 			CreatedAt: post.CreatedAt,
 			User:      post.User,
+			Media:     mediaList,
 		}
 
 		var likeCount int64
