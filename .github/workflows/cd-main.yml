@@ -1,0 +1,41 @@
+# GitHub Actions CD Workflow
+# Deploys the main backend API (cmd/api) to Railway when main branch is updated
+#
+# WHY: Railway does NOT have an incoming deploy webhook URL that can be
+# POSTed to trigger a redeploy. The correct approach is to use the Railway
+# CLI with a project-scoped API token.
+#
+# This workflow:
+# 1. Checks out the code
+# 2. Uses the Railway CLI to redeploy the specified service
+#
+# The RAILWAY_API_TOKEN secret is a project-level token scoped to the
+# production environment, so no `railway link` step is needed — the token
+# is already authorized for this project/environment.
+#
+# Required GitHub secrets:
+# - RAILWAY_API_TOKEN: Project-level token (environment-scoped)
+# - RAILWAY_SERVICE_ID: Railway service ID for the main API backend
+
+name: CD - Deploy Backend to Railway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/go/**'
+
+jobs:
+  deploy-backend:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Redeploy main API service
+        run: railway redeploy --service $RAILWAY_SERVICE_ID --yes

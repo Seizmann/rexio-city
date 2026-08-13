@@ -21,7 +21,7 @@ Do not start writing code before completing this read order.
 
 ## 1. Single-Agent-at-a-Time Rule
 
-Only one agent works on this repository at any given time, in a single session. You do not need to handle concurrent-edit conflicts. You do need to assume a **different agent, possibly a much weaker model**, will pick up work after you — write code and notes accordingly (clear, well-commented, no cleverness that only you would understand).
+Only one agent works on this repository at any given time. You do not need to handle concurrent-edit conflicts. You do need to assume a **different agent, possibly a much weaker model**, will pick up work after you — write code and notes accordingly (clear, well-commented, no cleverness that only you would understand).
 
 ---
 

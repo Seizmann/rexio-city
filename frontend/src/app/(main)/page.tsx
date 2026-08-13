@@ -9,10 +9,9 @@ import PostCard from '@/components/feed/PostCard';
 import { PostCardSkeleton } from '@/components/ui/Skeleton';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
-import { api, getAccessToken } from '@/lib/api';
+import { api } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
-import { debugLog } from '@/components/debug/DebugPanel';
 import { compressImage } from '@/lib/compression';
 
 export default function HomePage() {
@@ -77,11 +76,6 @@ export default function HomePage() {
     }) => {
       const { content, files, pendingKey } = payload;
 
-      debugLog('upload', `Starting post: ${files.length} file(s), content: ${content.slice(0, 30)}...`);
-      debugLog('auth', `User: ${user?.username}, Token: ${!!getAccessToken()}`);
-      console.log('[DEBUG] === POST ATTEMPT STARTED ===');
-      console.log('[DEBUG] Access token length:', getAccessToken()?.length || 0);
-
       const localPreviews = files.map(({ file, type }) => ({
         previewUrl: URL.createObjectURL(file),
         type,
@@ -128,20 +122,17 @@ export default function HomePage() {
             // Step 1: Compress image client-side if needed
             let uploadFile = file;
             if (type === 'photo' && file.size > 2 * 1024 * 1024) {
-              debugLog('upload', 'Compressing image...');
               try {
                 uploadFile = await compressImage(file, {
                   maxSizeMB: 2,
                   maxWidthOrHeight: 2048,
                 });
-                debugLog('upload', `Compressed: ${file.size}B -> ${uploadFile.size}B`);
               } catch (e) {
                 console.warn('[DEBUG] Compression failed, using original:', e);
               }
             }
 
             // Step 2: Request presigned URL from backend
-            debugLog('upload', 'Requesting presigned URL...');
             const requestRes = await api.post<{ url: string; media_url: string; key: string }>(
               API.MEDIA_UPLOAD_REQUEST,
               {
@@ -155,10 +146,8 @@ export default function HomePage() {
             }
 
             const { url: presignedUrl, key } = requestRes.data;
-            debugLog('upload', `Presigned URL received, key: ${key}`);
 
             // Step 3: Upload directly to R2 via presigned URL
-            debugLog('upload', 'Uploading to R2 directly...');
             const putRes = await fetch(presignedUrl, {
               method: 'PUT',
               headers: {
@@ -171,10 +160,8 @@ export default function HomePage() {
               const errText = await putRes.text();
               throw new Error(`R2 upload failed: ${putRes.status} - ${errText.slice(0, 100)}`);
             }
-            debugLog('upload', 'R2 upload succeeded');
 
             // Step 4: Confirm upload with backend
-            debugLog('upload', 'Confirming upload...');
             const completeRes = await api.post<{ url: string }>(API.MEDIA_UPLOAD_COMPLETE, {
               key,
               size: uploadFile.size,
@@ -218,8 +205,6 @@ export default function HomePage() {
         );
       } catch (err) {
         console.error('Post creation failed:', err);
-        debugLog('error', `Post failed: ${err instanceof Error ? err.message : String(err)}`);
-        console.log('[DEBUG] === POST FAILED ===');
         localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
         updateStatus('error');
         // Show user-facing error message

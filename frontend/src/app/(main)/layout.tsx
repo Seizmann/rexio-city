@@ -16,7 +16,6 @@ import TopBar from '@/components/layout/TopBar';
 import Sidebar from '@/components/layout/Sidebar';
 import BottomNav from '@/components/layout/BottomNav';
 import SplashScreen from '@/components/ui/SplashScreen';
-import DebugPanel from '@/components/debug/DebugPanel';
 import styles from './main.module.css';
 
 export default function MainLayout({
@@ -59,7 +58,6 @@ export default function MainLayout({
         <main className={styles.content} suppressHydrationWarning>{children}</main>
       </div>
       <BottomNav username={user?.username || ''} />
-      <DebugPanel />
     </div>
   );
 }

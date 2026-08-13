@@ -19,10 +19,51 @@ const BACKEND_URL =
   'http://localhost:10888';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+interface UploadRequest {
+  filename: string;
+  content_type: string;
+  size: number;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const targetUrl = `${BACKEND_URL}/api/media/upload-request`;
+
+    // Parse the JSON body to validate it
+    const bodyText = await request.text();
+
+    // Parse and validate the JSON
+    let parsedBody: UploadRequest | null = null;
+    try {
+      parsedBody = JSON.parse(bodyText) as UploadRequest;
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_JSON',
+            message: 'Invalid JSON in request body',
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    // Validate required fields
+    if (!parsedBody.filename || !parsedBody.content_type || !parsedBody.size) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'filename, content_type, and size are required',
+          },
+        },
+        { status: 400 },
+      );
+    }
 
     // Forward auth headers
     const forwardHeaders = new Headers();
@@ -32,9 +73,8 @@ export async function POST(request: NextRequest) {
     if (csrf) forwardHeaders.set('X-CSRF-Token', csrf);
     const cookie = request.headers.get('Cookie');
     if (cookie) forwardHeaders.set('Cookie', cookie);
+    forwardHeaders.set('Content-Type', 'application/json');
 
-    // Read body as text to avoid type issues
-    const bodyText = await request.text();
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
