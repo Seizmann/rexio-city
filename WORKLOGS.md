@@ -25,3 +25,12 @@
 ### Architecture: App Router Route Handler (Node.js runtime)
 ### Root Cause: Next.js Route Handler body size limit (likely 1MB default)
 ### Fix: Configure body size limit in next.config.ts or route handler
+
+### Fix applied:
+- Added `experimental.serverActions.bodySizeLimit: '32mb'` to `next.config.ts`
+- Added user-friendly 413 error handling in `/api/media/upload/route.ts`
+- Frontend api.ts already has safe JSON parsing (from previous session)
+- Both layers now support PRD's 30MB requirement:
+  - Next.js: 32MB (was 1MB default)
+  - Go backend: 500MB (unchanged, already sufficient)
+- Commit: 39e82a0
