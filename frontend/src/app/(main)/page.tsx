@@ -8,12 +8,15 @@ import PostComposer from '@/components/feed/PostComposer';
 import PostCard from '@/components/feed/PostCard';
 import { PostCardSkeleton } from '@/components/ui/Skeleton';
 import Button from '@/components/ui/Button';
-import { api } from '@/lib/api';
+import { useToast } from '@/components/ui/Toast';
+import { api, getAccessToken } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
+import { debugLog } from '@/components/debug/DebugPanel';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('foryou');
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
@@ -72,6 +75,9 @@ export default function HomePage() {
       pendingKey: string;
     }) => {
       const { content, files, pendingKey } = payload;
+
+      debugLog('upload', `Starting post: ${files.length} file(s), content: ${content.slice(0, 30)}...`);
+      debugLog('auth', `User: ${user?.username}, Token: ${!!getAccessToken()}`);
 
       const localPreviews = files.map(({ file, type }) => ({
         previewUrl: URL.createObjectURL(file),
@@ -160,8 +166,12 @@ export default function HomePage() {
         );
       } catch (err) {
         console.error('Post creation failed:', err);
+        debugLog('error', `Post failed: ${err instanceof Error ? err.message : String(err)}`);
         localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
         updateStatus('error');
+        // Show user-facing error message
+        const errorMsg = err instanceof Error ? err.message : 'Failed to post. Please try again.';
+        showToast(errorMsg, 'error');
         setTimeout(() => {
           setPosts((prev) => prev.filter((p) => p._pendingKey !== pendingKey));
         }, 3000);
