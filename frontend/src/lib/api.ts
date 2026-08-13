@@ -118,6 +118,12 @@ async function apiFetch<T>(
     credentials: 'include',
   });
 
+  // Check for 431 (header too large) — Vercel returns plain text, not JSON
+  if (response.status === 431) {
+    const text = await response.text();
+    throw new Error(text.includes('Request Header') ? 'Request headers too large. Please clear cookies and try again.' : text);
+  }
+
   // Attempt silent refresh on 401
   if (response.status === 401 && !skipAuth) {
     const refreshed = await attemptTokenRefresh();
