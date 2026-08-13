@@ -73,6 +73,15 @@ func main() {
 	userHandler := handlers.NewUserHandler()
 	followHandler := handlers.NewFollowHandler()
 
+	// ── Public user/profile endpoints (no auth required) ─────────
+	// These must be registered BEFORE protected routes so they take precedence.
+	// If registered after, the protected middleware catches them first.
+	app.Get("/api/users/:username", userHandler.GetUser)
+	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
+	app.Get("/api/users/:id/following", followHandler.GetFollowing)
+
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
@@ -90,7 +99,8 @@ func main() {
 	protected.Post("/auth/logout-all", authHandler.LogoutAll)
 
 	// ── Public user/profile endpoints (no auth required) ─────────
-	// These must be public so anyone can view profiles without logging in.
+	// These must be registered BEFORE protected routes so they take precedence.
+	// If registered after, the protected middleware catches them first.
 	app.Get("/api/users/:username", userHandler.GetUser)
 	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
 	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)

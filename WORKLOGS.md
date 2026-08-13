@@ -473,3 +473,12 @@ curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rex
 - ✅ Next.js frontend rebuilt and restarted on port 3800.
 - ✅ Fix committed: `a046b0f`.
 
+
+## [2026-08-13 21:44, GMT+6] — Agent: Antigravity — Model: Gemini 3.6 Flash
+### Root Cause Found for Profile Empty State:
+- **Issue:** Network payload showed `{"data": [...posts], "success": true}`, but UI rendered empty state.
+- **Root Cause:** `api.get` returns `APIResponse<T>` (`{ success: true, data: T }`). The backend `/api/posts` endpoint wraps its output inside `{ "data": [...posts], "success": true }`. When `api.get` wrapped this response again, `res.data` was an object containing `{ data: [...posts] }`, NOT a direct `Post[]` array. `Array.isArray(res.data)` evaluated to `false`, causing the profile page fetcher to return `[]` and render "No posts yet".
+- **Fix:** Updated `ProfilePage` fetcher to check whether `res.data` is a direct array or nested `{ data: Post[] }` object, correctly unwrapping the array in both cases.
+- ✅ Rebuilt Next.js frontend and restarted preview server on port 3800.
+- ✅ Fix committed: `0ea98e8`.
+
