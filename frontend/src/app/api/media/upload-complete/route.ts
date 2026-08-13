@@ -17,10 +17,45 @@ const BACKEND_URL =
   'http://localhost:10888';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const targetUrl = `${BACKEND_URL}/api/media/upload-complete`;
+
+    // Parse the JSON body to validate it
+    const bodyText = await request.text();
+    
+    // Parse and validate the JSON
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_JSON',
+            message: 'Invalid JSON in request body',
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    // Validate required fields
+    if (!parsedBody.key || !parsedBody.size) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'key and size are required',
+          },
+        },
+        { status: 400 },
+      );
+    }
 
     // Forward auth headers
     const forwardHeaders = new Headers();
@@ -30,14 +65,17 @@ export async function POST(request: NextRequest) {
     if (csrf) forwardHeaders.set('X-CSRF-Token', csrf);
     const cookie = request.headers.get('Cookie');
     if (cookie) forwardHeaders.set('Cookie', cookie);
+    forwardHeaders.set('Content-Type', 'application/json');
 
-    // Read body as text to avoid type issues
-    const bodyText = await request.text();
+    console.log(`[upload-complete] Forwarding to ${targetUrl}, body: ${bodyText}`);
+
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
       body: bodyText,
     });
+
+    console.log(`[upload-complete] Backend response: ${response.status}`);
 
     const responseHeaders = new Headers();
     responseHeaders.set(
@@ -55,6 +93,7 @@ export async function POST(request: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
+    console.error('[upload-complete] Error:', error);
     return NextResponse.json(
       {
         success: false,
