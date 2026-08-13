@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { ROUTES } from '@/lib/constants';
+import SearchInput from '@/components/search/SearchInput';
 import styles from './TopBar.module.css';
 
 /**
@@ -41,6 +42,7 @@ export default function TopBar() {
       </Link>
 
       <div className={styles.actions}>
+        <SearchInput className={styles.searchInput} />
         <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button
             className={styles.avatarBtn}

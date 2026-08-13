@@ -113,7 +113,39 @@ export interface FollowCounts {
   following?: number;
 }
 
-/* ── API Response Wrapper ─────────────────────────────────────── */
+/* ── Search ─────────────────────────────────────────────────────── */
+
+export interface SearchUserResult {
+  id: number;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+}
+
+export interface SearchPostResult {
+  id: number;
+  public_id: string;
+  content: string;
+  user_id: number;
+  created_at: string;
+  user: SearchUserResult;
+}
+
+export interface SearchHashtagResult {
+  hashtag: string;
+  count: number;
+  posts?: SearchPostResult[];
+}
+
+export interface SearchResponse {
+  users?: SearchUserResult[];
+  posts?: SearchPostResult[];
+  hashtags?: SearchHashtagResult[];
+  total: number;
+  has_users: boolean;
+  has_posts: boolean;
+  has_hashtags: boolean;
+}
 
 export interface APIResponse<T> {
   success: boolean;

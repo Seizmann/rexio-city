@@ -1,0 +1,321 @@
+/*
+ * SearchInput component styles
+ *
+ * DESIGN.md compliance:
+ * - All colors use CSS custom properties
+ * - All spacing uses CSS custom properties
+ * - Focus visible outlines using --accent
+ * - Mobile-first, responsive
+ */
+
+/* ── Container ──────────────────────────────────────────────────── */
+
+.container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Search Button (collapsed state) ────────────────────────────── */
+
+.searchButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.searchButton:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.searchIcon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.searchPlaceholder {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .searchPlaceholder {
+    display: inline;
+  }
+}
+
+/* ── Search Bar (expanded state) ───────────────────────────────── */
+
+.container.open {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .container.open {
+    width: 320px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container.open {
+    width: 400px;
+  }
+}
+
+.searchBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.container.open .searchBar:focus-within {
+  border-color: var(--accent);
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.clearButton:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── Results Dropdown ───────────────────────────────────────────── */
+
+.results {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  width: calc(100vw - var(--space-3) * 2);
+  max-width: 480px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: var(--z-dropdown);
+}
+
+@media (min-width: 640px) {
+  .results {
+    width: 100%;
+  }
+}
+
+/* ── Result Sections ────────────────────────────────────────────── */
+
+.resultSection {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.resultSection:last-child {
+  border-bottom: none;
+}
+
+.resultSectionTitle {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.resultList {
+  padding: 0;
+  margin: 0;
+}
+
+.resultItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--text);
+  transition: background var(--transition-fast);
+}
+
+.resultItem:hover {
+  background: var(--bg-secondary);
+}
+
+.resultItem:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── User Result ────────────────────────────────────────────────── */
+
+.resultAvatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.resultAvatarFallback {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.resultInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.resultUsername {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultDisplayName {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Post Result ────────────────────────────────────────────────── */
+
+.resultContent {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.resultPostContent {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.resultPostUser {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── Hashtag Result ─────────────────────────────────────────────── */
+
+.hashtag {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.hashtagCount {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── Footer Links ───────────────────────────────────────────────── */
+
+.seeAll {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-align: center;
+  transition: background var(--transition-fast);
+}
+
+.seeAll:hover {
+  background: var(--bg-secondary);
+}
+
+/* ── States ─────────────────────────────────────────────────────── */
+
+.loading {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+.empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}

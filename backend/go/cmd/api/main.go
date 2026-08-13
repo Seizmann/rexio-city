@@ -73,6 +73,17 @@ func main() {
 	userHandler := handlers.NewUserHandler()
 	followHandler := handlers.NewFollowHandler()
 
+	// ── Search (public, before protected group) ───────────────────
+	searchHandler := handlers.NewSearchHandler()
+	app.Get("/api/search", searchHandler.Search)
+
+	// ── Public user/profile endpoints (no auth required) ─────────
+	app.Get("/api/users/:username", userHandler.GetUser)
+	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
+	app.Get("/api/users/:id/following", followHandler.GetFollowing)
+
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
@@ -81,14 +92,7 @@ func main() {
 	// Exact route /api/users/me must be registered BEFORE wildcard /api/users/:username
 	protected.Get("/users/me", userHandler.GetCurrentUser)
 	protected.Patch("/users/me", userHandler.UpdateUser)
-	protected.Get("/search", userHandler.SearchUsers)
-
-	// ── Public user/profile endpoints (no auth required) ─────────
-	app.Get("/api/users/:username", userHandler.GetUser)
-	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
-	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
-	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
-	app.Get("/api/users/:id/following", followHandler.GetFollowing)
+	// Note: /api/search is already registered above as public
 
 	// Session management (auth required)
 	protected.Get("/auth/sessions", authHandler.ListSessions)

@@ -1,0 +1,315 @@
+/*
+ * Search results page styles
+ *
+ * DESIGN.md compliance: CSS custom properties only, mobile-first.
+ */
+
+.main {
+  width: 100%;
+  max-width: var(--feed-max-width);
+  margin: 0 auto;
+  padding: var(--space-3);
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+
+.header {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 var(--space-1);
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-3);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+.tabActive {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Sections ───────────────────────────────────────────────────── */
+
+.section {
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  margin: 0 calc(-1 * var(--space-3)) var(--space-2);
+}
+
+/* ── User List ──────────────────────────────────────────────────── */
+
+.userList {
+  display: flex;
+  flex-direction: column;
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition-fast);
+}
+
+.userCard:hover {
+  background: var(--bg-secondary);
+}
+
+.userCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.avatarFallback {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.displayName {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Post List ──────────────────────────────────────────────────── */
+
+.postList {
+  display: flex;
+  flex-direction: column;
+}
+
+.postCard {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition-fast);
+}
+
+.postCard:hover {
+  background: var(--bg-secondary);
+}
+
+.postCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.postHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.avatarSmall {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.avatarFallbackSmall {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.postUser {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.postContent {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* ── Hashtag List ───────────────────────────────────────────────── */
+
+.hashtagList {
+  display: flex;
+  flex-direction: column;
+}
+
+.hashtagCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition-fast);
+}
+
+.hashtagCard:hover {
+  background: var(--bg-secondary);
+}
+
+.hashtagCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.hashtag {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.hashtagCount {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ── States ─────────────────────────────────────────────────────── */
+
+.error {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--error);
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.emptyState {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.loading {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.loadMore {
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.loadMoreButton {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.loadMoreButton:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.loadMoreButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
