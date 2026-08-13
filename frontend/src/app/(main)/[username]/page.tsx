@@ -40,20 +40,19 @@ export default function ProfilePage() {
       },
     },
   );
-
-  // Use cached fetch for user posts
+  // Use cached fetch for user posts (only when user profile is loaded)
+  const postsKey = user ? `posts-user-${user.id}` : '';
   const { data: posts, loading: postsLoading } = useCachedFetch<Post[]>(
-    `posts-${username}`,
+    postsKey,
     async () => {
       if (!user) return [];
       const res = await api.get<Post[]>(`${API.POSTS}?user_id=${user.id}`);
       return res.success && res.data ? res.data : [];
     },
     {
-      dependencies: [username, refreshTrigger, user?.id],
+      dependencies: [user?.id, refreshTrigger],
     },
   );
-
   // Use follow counts from user object (already includes follower_count and following_count)
   const followCounts: FollowCounts = {
     follower_count: user?.follower_count ?? user?.followers ?? 0,

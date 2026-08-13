@@ -57,6 +57,12 @@ export function useCachedFetch<T>(
   useEffect(() => {
     isSubscribedRef.current = true;
 
+    // Skip fetch if key is empty/falsy
+    if (!key) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
+
     // Check cache first for immediate display
     const cachedData = getCached<T>(key);
 
