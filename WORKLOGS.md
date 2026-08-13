@@ -159,3 +159,70 @@
 - `AGENTS.md` (added Section 2.1 with full workflow)
 - `DECISIONS.md` (added D11)
 - `rexio-city-v1.md` (added testing note in Section 10)
+
+---
+
+## [2026-08-13 18:30, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User reported profile showing 0 followers, 0 following, no posts
+- Issue: User profile endpoints were behind auth middleware but shouldn't be
+
+### Root cause:
+- `GET /api/users/:username` was protected by auth middleware
+- `GET /api/users/:id/follow-counts` was protected by auth middleware
+- `GET /api/users/:id/is-following` was protected by auth middleware
+- These should be PUBLIC so anyone can view profiles without logging in
+
+### Fix applied:
+- Moved these three endpoints to public routes (before auth middleware)
+- Removed duplicate registrations from protected routes
+- Backend now serves public profile data without authentication
+
+### Files modified:
+- `backend/go/cmd/api/main.go`
+
+### Status:
+- Fix committed but NOT pushed yet (user requested skip)
+- Commit: `8fef22b`
+
+### Notes for next agent:
+- Push commit `8fef22b` when user gives approval
+- Backend build requires Go installed locally or in CI
+- Backend runs as root via systemd/service — restart with: `sudo systemctl restart rexio-backend` or manually kill + restart
+
+---
+
+## [2026-08-13 18:45, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User reported profile showing 0 followers, 0 following for all users
+- Root cause: Profile endpoints were behind auth middleware but should be public
+
+### Root cause identified:
+- `GET /api/users/:username` - was protected, should be PUBLIC
+- `GET /api/users/:id/follow-counts` - was protected, should be PUBLIC
+- `GET /api/users/:id/is-following` - was protected, should be PUBLIC
+
+### Fix applied:
+- Moved these 3 endpoints to public routes (before auth middleware)
+- Removed duplicate registrations from protected routes
+- Commit: `8fef22b`
+
+### Current status:
+- ✅ Backend code fixed (commit `8fef22b` pushed to dev)
+- ✅ Frontend running on port 3800 (dev-city.rexio.pro)
+- ❌ Backend NOT restarted yet — still running old binary (PID 1975724 as root)
+- ⚠️ Backend runs as root via systemd, needs sudo to restart
+
+### To restart backend:
+```bash
+# Option 1: Using systemd (if service exists)
+sudo systemctl restart rexio-backend
+
+# Option 2: Manual restart
+sudo pkill -f "rexio-city/backend/go/api"
+cd /home/sijan/SijansP/rexio-city/backend/go
+sudo -u sijan DATABASE_URL="$(grep DATABASE_URL .env | cut -d= -f2-)" nohup ./api > /tmp/rexio-backend.log 2>&1 &
+```
+
+### Files modified:
+- `backend/go/cmd/api/main.go`
