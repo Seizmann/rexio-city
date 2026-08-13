@@ -121,6 +121,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Proxy /api/* (except /api/media/upload handled by Node.js Route Handler) and /uploads/*
-  matcher: ['/api/((?!media/upload).*)', '/uploads/:path*'],
+  // Proxy /api/* (except /api/media/upload handled by Node.js Route Handlers) and /uploads/*
+  // Exclude: /api/media/upload, /api/media/upload-request, /api/media/upload-complete
+  matcher: ['/api/((?!media/upload(?:-request|-complete)?).*)', '/uploads/:path*'],
 };
