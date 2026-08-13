@@ -47,13 +47,12 @@ export async function POST(request: NextRequest) {
     //
     // By streaming request.body directly, we bypass this limit — the data
     // flows through Node.js streams without being fully buffered by Vercel.
-    // @ts-expect-error — duplex is valid in Node.js fetch but not in TypeScript's DOM lib yet
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
       body: request.body,
-      // duplex='half' allows reading a readable stream as a body
-      duplex: 'half',
+      // @ts-expect-error — duplex is a Node.js extension not in TypeScript's DOM lib
+      duplex: 'half' as any,
     });
 
     const responseHeaders = new Headers();
