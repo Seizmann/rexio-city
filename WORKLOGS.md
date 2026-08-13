@@ -17,6 +17,10 @@
 - Updated `src/app/(main)/[username]/page.tsx` (Profile) to use `useCachedFetch`
 - Cache invalidation on post submit and post updates
 
+### Bug fix:
+- Fixed cache bug where `getCached` returned `undefined` instead of `null` during fetch
+- This caused the feed to show empty state instead of loading skeletons
+
 ### Files modified:
 - `src/lib/cache.ts` (new)
 - `src/lib/useCachedFetch.ts` (new)
@@ -34,10 +38,11 @@
 - ✅ Updated Feed page (`/`) to use cached fetch — shows cached data immediately on repeat visits
 - ✅ Updated Profile page (`/[username]`) to use cached fetch — same improvement
 - ✅ Cache invalidation on post submit and post updates
+- ✅ Fixed cache bug causing empty feed
 - ✅ TypeScript type-check passes
 - ✅ ESLint passes (0 errors, only pre-existing warnings)
 - ✅ Next.js build succeeds
-- ✅ Commit pushed to `dev` branch (commit `6de997a`)
+- ✅ Commit pushed to `dev` branch (commit `ef0ce7d`)
 
 ### Left incomplete:
 - Messages page (`/messages`) and Notifications page (`/notifications`) don't exist yet — will need caching when implemented
