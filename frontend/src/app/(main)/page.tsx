@@ -13,6 +13,7 @@ import { api, getAccessToken } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
 import { debugLog } from '@/components/debug/DebugPanel';
+import { compressImage } from '@/lib/compression';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -124,17 +125,66 @@ export default function HomePage() {
 
         if (files.length > 0) {
           for (const { file, type } of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await api.upload<{ url: string; type: string }>(
-              API.MEDIA_UPLOAD,
-              formData,
-            );
-            if (!res.success || !res.data?.url) {
-              throw new Error(res.error?.message || 'Media upload failed');
+            // Step 1: Compress image client-side if needed
+            let uploadFile = file;
+            if (type === 'photo' && file.size > 2 * 1024 * 1024) {
+              debugLog('upload', 'Compressing image...');
+              try {
+                uploadFile = await compressImage(file, {
+                  maxSizeMB: 2,
+                  maxWidthOrHeight: 2048,
+                });
+                debugLog('upload', `Compressed: ${file.size}B -> ${uploadFile.size}B`);
+              } catch (e) {
+                console.warn('[DEBUG] Compression failed, using original:', e);
+              }
             }
-            mediaUrls.push(res.data.url);
-            mediaTypes.push(res.data.type || type);
+
+            // Step 2: Request presigned URL from backend
+            debugLog('upload', 'Requesting presigned URL...');
+            const requestRes = await api.post<{ url: string; media_url: string; key: string }>(
+              API.MEDIA_UPLOAD_REQUEST,
+              {
+                filename: uploadFile.name,
+                content_type: uploadFile.type,
+                size: uploadFile.size,
+              },
+            );
+            if (!requestRes.success || !requestRes.data?.url) {
+              throw new Error(requestRes.error?.message || 'Failed to get presigned URL');
+            }
+
+            const { url: presignedUrl, key } = requestRes.data;
+            debugLog('upload', `Presigned URL received, key: ${key}`);
+
+            // Step 3: Upload directly to R2 via presigned URL
+            debugLog('upload', 'Uploading to R2 directly...');
+            const putRes = await fetch(presignedUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': uploadFile.type,
+              },
+              body: uploadFile,
+            });
+
+            if (!putRes.ok) {
+              const errText = await putRes.text();
+              throw new Error(`R2 upload failed: ${putRes.status} - ${errText.slice(0, 100)}`);
+            }
+            debugLog('upload', 'R2 upload succeeded');
+
+            // Step 4: Confirm upload with backend
+            debugLog('upload', 'Confirming upload...');
+            const completeRes = await api.post<{ url: string }>(API.MEDIA_UPLOAD_COMPLETE, {
+              key,
+              size: uploadFile.size,
+            });
+            if (!completeRes.success || !completeRes.data?.url) {
+              throw new Error(completeRes.error?.message || 'Upload confirmation failed');
+            }
+
+            mediaUrls.push(completeRes.data.url);
+            mediaTypes.push(type);
           }
           updateStatus('updating');
         }
