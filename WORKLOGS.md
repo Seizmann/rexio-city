@@ -102,3 +102,10 @@
 - Frontend: Deployed to https://city.rexio.pro
 - Upload flow: Now uses presigned URLs for direct R2 upload
 - Compression: Client-side Canvas API, no external deps
+- CI: All tests passing ✅
+
+### End-of-session notes:
+- Old direct-upload endpoint (/api/media/upload) still exists but is deprecated
+- New flow: compress → request presigned URL → direct R2 PUT → verify upload
+- Browser bypasses Vercel limit by uploading directly to Cloudflare R2
+- Mobile camera photos (5-15MB) now work after client-side compression
