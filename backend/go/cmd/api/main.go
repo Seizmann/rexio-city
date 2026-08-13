@@ -69,6 +69,14 @@ func main() {
 	app.Get("/api/posts/:id", postHandler.GetPost)
 	app.Get("/api/posts/:id/comments", postHandler.GetPostComments)
 
+	// ── Public user/profile endpoints (no auth required) ─────────
+	// These must be public so anyone can view profiles without logging in.
+	userHandler := handlers.NewUserHandler()
+	app.Get("/api/users/:username", userHandler.GetUser)
+	followHandler := handlers.NewFollowHandler()
+	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
@@ -80,11 +88,10 @@ func main() {
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Post("/auth/logout-all", authHandler.LogoutAll)
 
-	// User routes
-	userHandler := handlers.NewUserHandler()
+	// User routes (auth required for modifications, but GET /users/:username is public)
+	// Note: GetUser is already registered above as a public route.
 	protected.Get("/users/me", userHandler.GetCurrentUser)
 	protected.Patch("/users/me", userHandler.UpdateUser)
-	protected.Get("/users/:username", userHandler.GetUser)
 	protected.Get("/search", userHandler.SearchUsers)
 
 	// Post routes
@@ -103,14 +110,12 @@ func main() {
 	feedHandler := handlers.NewFeedHandler()
 	protected.Get("/feed", feedHandler.ListFeed)
 
-	// Follow routes
-	followHandler := handlers.NewFollowHandler()
+	// Follow routes (auth required for mutations, but GET follow-counts and is-following are public)
+	// Note: GetFollowCounts and IsFollowing are already registered above as public routes.
 	protected.Post("/users/:id/follow", followHandler.FollowUser)
 	protected.Delete("/users/:id/follow", followHandler.UnfollowUser)
 	protected.Get("/users/:id/followers", followHandler.GetFollowers)
 	protected.Get("/users/:id/following", followHandler.GetFollowing)
-	protected.Get("/users/:id/follow-counts", followHandler.GetFollowCounts)
-	protected.Get("/users/:id/is-following", followHandler.IsFollowing)
 
 	// DM routes
 	dmHandler := handlers.NewDMHandler()
