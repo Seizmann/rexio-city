@@ -11,7 +11,7 @@
  */
 
 interface CacheEntry<T> {
-  data: T;
+  data?: T;
   timestamp: number;
   promise?: Promise<T>;
 }
@@ -32,6 +32,11 @@ export function getCached<T>(key: string): T | null {
   // Check if expired
   if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
     cache.delete(key);
+    return null;
+  }
+
+  // If data is not yet available (still fetching), return null
+  if (entry.data === undefined) {
     return null;
   }
 
@@ -106,8 +111,7 @@ export async function fetchWithCache<T>(
   });
 
   cache.set(key, {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    data: undefined as unknown as T,
+    data: undefined,
     timestamp: Date.now(),
     promise,
   });
