@@ -51,6 +51,9 @@ coverage/
 # Session logs and project docs
 WORKLOGS.md
 rexio-city-v1.md
+AGENTS.md
+DESIGN.md
+DECISIONS.md
 
 # Go binaries
 backend/go/bin/
