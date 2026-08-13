@@ -553,3 +553,27 @@ curl -s https://dev-city.rexio.pro/api/users/irin
 - Frontend started via `npm run start:preview` in background (persistent)
 - To restart frontend manually: `cd frontend && npm run start:preview`
 - To restart backend: `docker restart docker-backend-1`
+
+---
+
+## [2026-08-13 22:55, GMT+6] — Agent: Kilo — Model: agnes-2.0-flash
+### Task:
+- User requested pushing all latest local changes to dev branch
+
+### Checks run:
+- ✅ TypeScript type-check passes (tsc --noEmit)
+- ✅ Go vet passes (go vet ./...)
+- ✅ Go tests pass (go test ./... - handlers 1.109s, services cached)
+- ✅ Go files formatted (gofmt)
+- ✅ Frontend build succeeds (npm run build)
+- ✅ ESLint fixed: 0 errors (4 pre-existing warnings remain)
+
+### Commits pushed to dev:
+- `dc5dea3` fix(profile): render posts inline skeleton during postsLoading
+- `e5889d9` fix(lint): resolve eslint errors in useCachedFetch and ProfilePage + format Go files
+- `d72c53d` chore: ignore uploads/test files and tsbuildinfo
+
+### Notes for next agent:
+- Backend runs in Docker container named docker-backend-1
+- To restart backend: `docker restart docker-backend-1`
+- To rebuild backend: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
