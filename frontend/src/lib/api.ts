@@ -110,13 +110,19 @@ async function apiFetch<T>(
     }
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(path, {\
     ...options,
     headers,
     // Credentials=include ensures the httpOnly refresh cookie and CSRF cookie
     // are sent with requests to the same origin (Next.js proxy).
     credentials: 'include',
   });
+
+  // Check for 431 (header too large) — Vercel returns plain text, not JSON
+  if (response.status === 431) {
+    const text = await response.text();
+    throw new Error(text.includes('Request Header') ? 'Request headers too large. Please clear cookies and try again.' : text);
+  }
 
   // Attempt silent refresh on 401
   if (response.status === 401 && !skipAuth) {
