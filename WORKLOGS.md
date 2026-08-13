@@ -577,3 +577,18 @@ curl -s https://dev-city.rexio.pro/api/users/irin
 - Backend runs in Docker container named docker-backend-1
 - To restart backend: `docker restart docker-backend-1`
 - To rebuild backend: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
+
+---
+
+## [2026-08-13 22:57, GMT+6] — Agent: Kilo — Model: agnes-2.0-flash
+### Task:
+- Ensure frontend is always running on the system
+
+### Status:
+- ✅ Frontend running persistently on port 3800 (background process id: bgp_ffc0d6040001kAtiDjxXQWZDHC)
+- ✅ Tunnel active, dev-city.rexio.pro returns 200
+- ✅ All 4 commits pushed to dev branch
+
+### Notes for next agent:
+- Frontend managed by Kilo background process manager
+- To manually restart: `cd /home/sijan/SijansP/rexio-city/frontend && npm run start:preview`
