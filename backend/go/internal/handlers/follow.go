@@ -29,7 +29,7 @@ func (h *FollowHandler) FollowUser(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(userID, "%d", &followeeID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
@@ -38,18 +38,18 @@ func (h *FollowHandler) FollowUser(c *fiber.Ctx) error {
 		if err.Error() == "already following" {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"success": false,
-				"error": fiber.Map{"code": "CONFLICT", "message": err.Error()},
+				"error":   fiber.Map{"code": "CONFLICT", "message": err.Error()},
 			})
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "User followed"},
+		"data":    fiber.Map{"message": "User followed"},
 	})
 }
 
@@ -62,7 +62,7 @@ func (h *FollowHandler) UnfollowUser(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(userID, "%d", &followeeID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
@@ -70,13 +70,13 @@ func (h *FollowHandler) UnfollowUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "User unfollowed"},
+		"data":    fiber.Map{"message": "User unfollowed"},
 	})
 }
 
@@ -88,7 +88,7 @@ func (h *FollowHandler) GetFollowers(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(userID, "%d", &targetUserID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
@@ -99,17 +99,17 @@ func (h *FollowHandler) GetFollowers(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": users,
+		"data":    users,
 		"meta": fiber.Map{
-			"page": page,
+			"page":     page,
 			"per_page": perPage,
-			"total": total,
+			"total":    total,
 		},
 	})
 }
@@ -122,7 +122,7 @@ func (h *FollowHandler) GetFollowing(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(userID, "%d", &targetUserID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
@@ -133,17 +133,17 @@ func (h *FollowHandler) GetFollowing(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": users,
+		"data":    users,
 		"meta": fiber.Map{
-			"page": page,
+			"page":     page,
 			"per_page": perPage,
-			"total": total,
+			"total":    total,
 		},
 	})
 }
@@ -156,7 +156,7 @@ func (h *FollowHandler) GetFollowCounts(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(userID, "%d", &targetUserID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
@@ -164,7 +164,7 @@ func (h *FollowHandler) GetFollowCounts(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
@@ -180,28 +180,38 @@ func (h *FollowHandler) GetFollowCounts(c *fiber.Ctx) error {
 }
 
 // IsFollowing handles GET /api/users/:id/is-following
+// This endpoint is PUBLIC - it returns whether the current user is following the target.
+// If the user is not authenticated, it returns false (no follow relationship).
 func (h *FollowHandler) IsFollowing(c *fiber.Ctx) error {
-	followerID := c.Locals("user_id").(uint)
 	userID := c.Params("id")
-
-	var followeeID uint
-	if _, err := fmt.Sscanf(userID, "%d", &followeeID); err != nil {
+	followeeID, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid user ID"},
 		})
 	}
 
-	isFollowing, err := h.followService.IsFollowing(followerID, followeeID)
+	followerLocals := c.Locals("user_id")
+	if followerLocals == nil {
+		// Unauthenticated user - cannot check follow status, return false
+		return c.JSON(fiber.Map{
+			"success": true,
+			"data":    fiber.Map{"is_following": false},
+		})
+	}
+	followerID := followerLocals.(uint)
+
+	isFollowing, err := h.followService.IsFollowing(followerID, uint(followeeID))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"is_following": isFollowing},
+		"data":    fiber.Map{"is_following": isFollowing},
 	})
 }

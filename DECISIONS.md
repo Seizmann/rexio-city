@@ -92,4 +92,85 @@ Record of binding architecture decisions for the RexiO City project. Do not sile
 
 ---
 
+## D9: Dev Preview Frontend Moved to Self-Hosted
+
+**Decision:** Move dev preview frontend from Vercel to self-hosted on home server via Cloudflare Tunnel on port 3800.
+
+**Rationale:** Vercel Hobby plan daily deployment limit was exhausted, preventing preview deployments. Production remains on Vercel as it has sufficient limits.
+
+**What changed:**
+- Dev preview (`dev-city.rexio.pro`) now served from home server via Cloudflare Tunnel
+- Frontend runs on port 3800 (not default 3000)
+- Build command: `npm run build` followed by `npm run start:preview`
+- Added `start:preview` script to `frontend/package.json`
+
+**What did NOT change:**
+- Production frontend (`city.rexio.pro`) remains on Vercel
+- Admin panel (`oppscity.rexio.pro`) remains on Vercel
+- Backend deployment unchanged
+
+**Reversibility:** This change is reversible if Vercel plan is upgraded later. Simply redeploy to Vercel and remove the self-hosted tunnel configuration.
+
+**Status:** Active
+**Date:** 2026-08-13
+
+---
+
+## D10: Manual Approval Required Before Push
+
+**Decision:** No `git push` to any branch (dev, main, or otherwise) may be performed without explicit user confirmation.
+
+**Rationale:** Prevents accidental or automated pushes that could break production or waste CI resources. The user must always explicitly approve before code is pushed.
+
+**What changed:**
+- All push operations must ask for user confirmation first
+- Do not auto-push even when all checks pass
+- Use `clarify` tool to ask for approval before executing `git push`
+
+**Status:** Active
+**Date:** 2026-08-13
+
+---
+
+## D11: Dev Preview is Self-Hosted on Home Server
+
+**Decision:** The dev preview (`dev-city.rexio.pro`) is self-hosted on the home server via Cloudflare Tunnel, NOT on Vercel. All testing must be done on the self-hosted preview.
+
+**Rationale:** Vercel Hobby plan daily deployment limits were exhausted. Production remains on Vercel with sufficient limits. The self-hosted dev preview allows unlimited deployments without hitting rate limits.
+
+**What this means for agents:**
+- Do NOT assume Vercel is hosting the dev preview — it is self-hosted
+- All testing must be done on `https://dev-city.rexio.pro` (not just localhost)
+- The Cloudflare Tunnel must be running for the preview to be accessible
+- Tunnel credentials live in `~/.cloudflared/` — NEVER commit them
+- The tunnel is configured in `~/.cloudflared/config.yml` (outside the repo)
+- Frontend runs on port 3800 via `npm run start:preview`
+
+**Tunnel configuration:**
+```yaml
+# ~/.cloudflared/config.yml
+tunnel: <uuid>
+credentials-file: /home/sijan/.cloudflared/<uuid>.json
+
+ingress:
+  - hostname: dev-city.rexio.pro
+    service: http://localhost:3800
+  - hostname: citydev.rexio.pro
+    service: http://localhost:10888
+  # ... other routes
+```
+
+**How to verify tunnel is running:**
+```bash
+systemctl --user status cloudflared
+curl -s https://dev-city.rexio.pro | grep -o "RexiO City"
+```
+
+**Reversibility:** This can be reverted to Vercel if the Vercel plan is upgraded. Simply redeploy to Vercel and remove the tunnel ingress rule.
+
+**Status:** Active
+**Date:** 2026-08-13
+
+---
+
 *Record all future decisions here with date, status, and rationale.*

@@ -78,7 +78,6 @@ func Init(cfg *config.Config) {
 	log.Println("Database connected successfully")
 }
 
-
 // GetDB returns the global database instance
 func GetDB() *gorm.DB {
 	if DB == nil {

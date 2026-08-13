@@ -50,17 +50,17 @@ func (h *DMHandler) GetConversations(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": conversations,
+		"data":    conversations,
 		"meta": fiber.Map{
-			"page": page,
+			"page":     page,
 			"per_page": perPage,
-			"total": total,
+			"total":    total,
 		},
 	})
 }
@@ -74,7 +74,7 @@ func (h *DMHandler) GetMessages(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
 		})
 	}
 
@@ -90,7 +90,7 @@ func (h *DMHandler) GetMessages(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
@@ -99,7 +99,7 @@ func (h *DMHandler) GetMessages(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": messages,
+		"data":    messages,
 		"meta": fiber.Map{
 			"unread_count": unreadCount,
 		},
@@ -115,7 +115,7 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
 		})
 	}
 
@@ -127,7 +127,7 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
@@ -140,7 +140,7 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
@@ -152,14 +152,14 @@ func (h *DMHandler) SendMessage(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": message,
+		"data":    message,
 	})
 }
 
 // ConnectWS handles WebSocket connection for real-time DMs
 func (h *DMHandler) ConnectWS(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
-	
+
 	// Use websocket.New for Fiber integration
 	return websocket.New(func(c *websocket.Conn) {
 		// Create connection
@@ -242,7 +242,7 @@ func (h *DMHandler) broadcastToConversation(conversationID uint, message *servic
 	for _, client := range h.wsClients {
 		msg := fmt.Sprintf(`{"type":"new_message","conversation_id":%d}`, conversationID)
 		if message != nil {
-			msg = fmt.Sprintf(`{"type":"new_message","conversation_id":%d,"message":%s}`, 
+			msg = fmt.Sprintf(`{"type":"new_message","conversation_id":%d,"message":%s}`,
 				conversationID, messageJSON(message))
 		}
 		select {
@@ -259,7 +259,7 @@ func (h *DMHandler) broadcastTypingIndicator(conversationID uint, userID uint, i
 	if isTyping {
 		msgType = "typing_start"
 	}
-	
+
 	for _, client := range h.wsClients {
 		if client.UserID != userID {
 			payload := fmt.Sprintf(`{"type":"%s","user_id":%d,"conversation_id":%d}`,
@@ -284,24 +284,24 @@ func (h *DMHandler) CreateConversation(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
 	conversation, err := h.dmService.NewConversation(services.CreateConversationInput{
-		UserID:           userID,
-		ParticipantIDs:   input.ParticipantIDs,
+		UserID:         userID,
+		ParticipantIDs: input.ParticipantIDs,
 	})
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": conversation,
+		"data":    conversation,
 	})
 }
 
@@ -314,7 +314,7 @@ func (h *DMHandler) GetUnreadCount(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
 		})
 	}
 
@@ -322,13 +322,13 @@ func (h *DMHandler) GetUnreadCount(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"unread_count": count},
+		"data":    fiber.Map{"unread_count": count},
 	})
 }
 
@@ -341,7 +341,7 @@ func (h *DMHandler) MarkConversationRead(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
 		})
 	}
 
@@ -349,13 +349,13 @@ func (h *DMHandler) MarkConversationRead(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Conversation marked as read"},
+		"data":    fiber.Map{"message": "Conversation marked as read"},
 	})
 }
 
@@ -368,7 +368,7 @@ func (h *DMHandler) GetTypingUsers(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(conversationID, "%d", &convID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid conversation ID"},
 		})
 	}
 
@@ -376,7 +376,7 @@ func (h *DMHandler) GetTypingUsers(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": typingUsers,
+		"data":    typingUsers,
 	})
 }
 

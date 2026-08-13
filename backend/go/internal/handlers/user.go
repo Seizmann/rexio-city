@@ -33,13 +33,13 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
+			"error":   fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
@@ -54,7 +54,7 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 	if userID == 0 {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "UNAUTHORIZED", "message": "Unauthorized"},
+			"error":   fiber.Map{"code": "UNAUTHORIZED", "message": "Unauthorized"},
 		})
 	}
 
@@ -62,13 +62,13 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
+			"error":   fiber.Map{"code": "NOT_FOUND", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
@@ -83,7 +83,7 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	if userID == 0 {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "UNAUTHORIZED", "message": "Unauthorized"},
+			"error":   fiber.Map{"code": "UNAUTHORIZED", "message": "Unauthorized"},
 		})
 	}
 
@@ -91,7 +91,7 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
@@ -99,13 +99,13 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result,
+		"data":    result,
 	})
 }
 
@@ -115,7 +115,7 @@ func (h *UserHandler) SearchUsers(c *fiber.Ctx) error {
 	if len(query) < 2 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Search query must be at least 2 characters"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Search query must be at least 2 characters"},
 		})
 	}
 
@@ -126,17 +126,17 @@ func (h *UserHandler) SearchUsers(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": result.Users,
+		"data":    result.Users,
 		"meta": fiber.Map{
-			"page": page,
+			"page":     page,
 			"per_page": perPage,
-			"total": result.Total,
+			"total":    result.Total,
 		},
 	})
 }

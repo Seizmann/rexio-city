@@ -4,28 +4,28 @@ import "time"
 
 // User represents a platform user
 type User struct {
-	ID            uint       `json:"id" gorm:"primaryKey"`
-	Username      string     `json:"username" gorm:"uniqueIndex;size:15"`
-	DisplayName   *string    `json:"display_name" gorm:"size:50"`
-	Bio           *string    `json:"bio" gorm:"size:160"`
-	AvatarURL     *string    `json:"avatar_url"`
-	CoverURL      *string    `json:"cover_url"`
-	Email         *string    `json:"email" gorm:"uniqueIndex"`
-	PasswordHash  string     `json:"-" gorm:"size:255"`
-	EmailVerified bool       `json:"email_verified" gorm:"default:false"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            uint      `json:"id" gorm:"primaryKey"`
+	Username      string    `json:"username" gorm:"uniqueIndex;size:15"`
+	DisplayName   *string   `json:"display_name" gorm:"size:50"`
+	Bio           *string   `json:"bio" gorm:"size:160"`
+	AvatarURL     *string   `json:"avatar_url"`
+	CoverURL      *string   `json:"cover_url"`
+	Email         *string   `json:"email" gorm:"uniqueIndex"`
+	PasswordHash  string    `json:"-" gorm:"size:255"`
+	EmailVerified bool      `json:"email_verified" gorm:"default:false"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // Post represents a social post with a 16-character random public_id
 type Post struct {
-	ID        uint       `json:"id" gorm:"primaryKey"`
-	PublicID  string     `json:"public_id" gorm:"uniqueIndex;size:32"`
-	UserID    uint       `json:"user_id"`
-	Content   string     `json:"content" gorm:"size:500"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at" gorm:"index"`
+	ID        uint        `json:"id" gorm:"primaryKey"`
+	PublicID  string      `json:"public_id" gorm:"uniqueIndex;size:32"`
+	UserID    uint        `json:"user_id"`
+	Content   string      `json:"content" gorm:"size:500"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	DeletedAt *time.Time  `json:"deleted_at" gorm:"index"`
 	User      User        `json:"user" gorm:"foreignKey:UserID"`
 	Media     []PostMedia `json:"media" gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
 }
@@ -101,7 +101,7 @@ type DMMessage struct {
 	ID             uint      `json:"id" gorm:"primaryKey"`
 	ConversationID uint      `json:"conversation_id"`
 	SenderID       uint      `json:"sender_id"`
-	EncryptedData  []byte    `json:"-"` // AES-256-GCM ciphertext
+	EncryptedData  []byte    `json:"-"`  // AES-256-GCM ciphertext
 	IV             []byte    `json:"iv"` // nonce
 	CreatedAt      time.Time `json:"created_at"`
 }
@@ -124,7 +124,6 @@ type Setting struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-
 // Session represents a persistent refresh-token session with rotation lineage.
 // token_hash is SHA-256 of the raw refresh token — we never store the raw token.
 // parent_session_id links to the session this was rotated from, forming a chain
@@ -134,11 +133,10 @@ type Session struct {
 	UserID          uint       `json:"user_id"`
 	TokenHash       string     `json:"-" gorm:"uniqueIndex;size:64"` // never expose in JSON
 	ParentSessionID *uint      `json:"parent_session_id"`
-	DeviceInfo      string     `json:"device_info"`   // User-Agent
-	IPAddress       string     `json:"ip_address"`    // client IP
+	DeviceInfo      string     `json:"device_info"` // User-Agent
+	IPAddress       string     `json:"ip_address"`  // client IP
 	CreatedAt       time.Time  `json:"created_at"`
 	LastUsedAt      time.Time  `json:"last_used_at"`
 	ExpiresAt       time.Time  `json:"expires_at"`
 	RevokedAt       *time.Time `json:"revoked_at"` // nil = active
 }
-

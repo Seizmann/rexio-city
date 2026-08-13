@@ -33,63 +33,66 @@ export default function ProfilePage() {
     {
       dependencies: [username, refreshTrigger],
       onSuccess: (userData) => {
-        if (userData && authUser) {
-          // Fetch follow status in background
-          void api
-            .get<{ is_following: boolean }>(API.IS_FOLLOWING(userData.id))
-            .then((res) => {
-              if (res.success && res.data) {
-                setIsFollowing(res.data.is_following);
-              }
-            })
-            .catch(() => {
-              // Ignore errors
-            });
+        // Use is_following from user object if available
+        if (userData && userData.is_following !== undefined) {
+          setIsFollowing(userData.is_following);
         }
       },
     },
   );
+  // Direct fetch for user posts when user object resolves
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
 
-  // Use cached fetch for user posts
-  const { data: posts, loading: postsLoading } = useCachedFetch<Post[]>(
-    `posts-${username}`,
-    async () => {
-      if (!user) return [];
-      const res = await api.get<Post[]>(`${API.POSTS}?user_id=${user.id}`);
-      return res.success && res.data ? res.data : [];
-    },
-    {
-      dependencies: [username, refreshTrigger, user?.id],
-    },
-  );
-
-  const [followCounts, setFollowCounts] = useState<FollowCounts>({
-    follower_count: 0,
-    following_count: 0,
-  });
-
-  // Fetch follow counts when user is loaded
   useEffect(() => {
-    if (!user) return;
-    api
-      .get<FollowCounts>(API.FOLLOW_COUNTS(user.id))
-      .then((res) => {
-        if (res.success && res.data) {
-          setFollowCounts(res.data);
-        }
-      })
-      .catch(() => {
-        // Ignore errors
-      });
-  }, [user]);
+    const userId = user?.id;
+    if (!userId) return;
+    let isSubscribed = true;
 
-  const loading = userLoading || postsLoading;
+    async function loadPosts() {
+      setPostsLoading(true);
+      try {
+        const res = await api.get<Post[] | { data: Post[] }>(`${API.POSTS}?user_id=${userId}`);
+        if (!isSubscribed) return;
+
+        if (res.success && res.data) {
+          if (Array.isArray(res.data)) {
+            setPosts(res.data);
+          } else if ('data' in res.data && Array.isArray(res.data.data)) {
+            setPosts(res.data.data);
+          } else {
+            setPosts([]);
+          }
+        } else {
+          setPosts([]);
+        }
+      } catch {
+        if (isSubscribed) setPosts([]);
+      } finally {
+        if (isSubscribed) setPostsLoading(false);
+      }
+    }
+
+    void loadPosts();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [user?.id, refreshTrigger]);
+
+  // Use follow counts from user object (already includes follower_count and following_count)
+  const followCounts: FollowCounts = {
+    follower_count: user?.follower_count ?? user?.followers ?? 0,
+    following_count: user?.following_count ?? user?.following ?? 0,
+    followers: user?.followers ?? user?.follower_count ?? 0,
+    following: user?.following ?? user?.following_count ?? 0,
+  };
 
   function handleEditProfile() {
     setRefreshTrigger((prev) => prev + 1);
   }
 
-  if (loading) {
+  if (userLoading) {
     return (
       <div className={styles.container}>
         <PostCardSkeleton />
@@ -124,7 +127,12 @@ export default function ProfilePage() {
       <div className={styles.content}>
         {activeTab === 'posts' && (
           <div className={styles.feed}>
-            {posts && posts.length > 0 ? (
+            {postsLoading ? (
+              <>
+                <PostCardSkeleton />
+                <PostCardSkeleton />
+              </>
+            ) : posts && posts.length > 0 ? (
               posts.map((post) => <PostCard key={post.id} post={post} />)
             ) : (
               <div className={styles.emptyState}>

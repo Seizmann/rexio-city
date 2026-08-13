@@ -32,10 +32,10 @@ type DMConnection struct {
 
 // Conversation represents a DM conversation
 type Conversation struct {
-	ID             uint             `json:"id"`
-	Participants   []Participant    `json:"participants"`
-	LatestMessage  *DMMessage       `json:"latest_message"`
-	CreatedAt      time.Time        `json:"created_at"`
+	ID            uint          `json:"id"`
+	Participants  []Participant `json:"participants"`
+	LatestMessage *DMMessage    `json:"latest_message"`
+	CreatedAt     time.Time     `json:"created_at"`
 }
 
 // Participant represents a user in a conversation
@@ -59,7 +59,7 @@ type DMMessage struct {
 
 // CreateConversationInput contains conversation creation data
 type CreateConversationInput struct {
-	UserID           uint
+	UserID         uint
 	ParticipantIDs []uint
 }
 
@@ -280,12 +280,12 @@ func (s *DMService) getConversationDetail(conversationID uint) (*Conversation, e
 		var sender models.User
 		db.GetDB().First(&sender, lastMsg.SenderID)
 		latestMessage = &DMMessage{
-			ID:             lastMsg.ID,
-			SenderID:       lastMsg.SenderID,
-			SenderName:     sender.Username,
-			EncryptedData:  base64.StdEncoding.EncodeToString(lastMsg.EncryptedData),
-			IV:             base64.StdEncoding.EncodeToString(lastMsg.IV),
-			CreatedAt:      lastMsg.CreatedAt,
+			ID:            lastMsg.ID,
+			SenderID:      lastMsg.SenderID,
+			SenderName:    sender.Username,
+			EncryptedData: base64.StdEncoding.EncodeToString(lastMsg.EncryptedData),
+			IV:            base64.StdEncoding.EncodeToString(lastMsg.IV),
+			CreatedAt:     lastMsg.CreatedAt,
 		}
 	}
 

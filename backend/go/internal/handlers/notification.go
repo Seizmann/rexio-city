@@ -37,18 +37,18 @@ func (h *NotificationHandler) GetNotifications(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": notifications,
+		"data":    notifications,
 		"meta": fiber.Map{
-			"page": page,
+			"page":     page,
 			"per_page": perPage,
-			"total": total,
-			"tab": tab,
+			"total":    total,
+			"tab":      tab,
 		},
 	})
 }
@@ -62,7 +62,7 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 	if _, err := fmt.Sscanf(notificationID, "%d", &notifID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid notification ID"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid notification ID"},
 		})
 	}
 
@@ -74,13 +74,13 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 		}
 		return c.Status(statusCode).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "Notification marked as read"},
+		"data":    fiber.Map{"message": "Notification marked as read"},
 	})
 }
 
@@ -92,13 +92,13 @@ func (h *NotificationHandler) MarkAllAsRead(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"message": "All notifications marked as read"},
+		"data":    fiber.Map{"message": "All notifications marked as read"},
 	})
 }
 
@@ -110,12 +110,12 @@ func (h *NotificationHandler) GetUnreadCount(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "SERVER_ERROR", "message": err.Error()},
 		})
 	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
-		"data": fiber.Map{"unread_count": count},
+		"data":    fiber.Map{"unread_count": count},
 	})
 }

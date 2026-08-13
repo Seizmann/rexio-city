@@ -118,9 +118,9 @@ func (h *MediaHandler) CompleteUpload(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"url":    mediaURL,
-			"key":    req.Key,
-			"size":   req.Size,
+			"url":  mediaURL,
+			"key":  req.Key,
+			"size": req.Size,
 		},
 	})
 }

@@ -17,6 +17,7 @@ export interface User {
   following?: number;
   follower_count?: number;
   following_count?: number;
+  is_following?: boolean; // computed by backend, not stored in DB
   created_at?: string;
   updated_at?: string;
 }

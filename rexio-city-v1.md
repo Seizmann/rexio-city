@@ -82,7 +82,9 @@ rexio-city/
 ### Deployment Targets
 
 ```bash
-# Frontend (Vercel)
+# Frontend
+# Production: Vercel-hosted
+# Dev preview: Self-hosted on home server via Cloudflare Tunnel (port 3800)
 Production: https://city.rexio.pro
 Preview:    https://dev-city.rexio.pro
 
@@ -343,9 +345,15 @@ settings (key, value, updated_at)
 ## 10. Deployment
 
 ### Frontend (Next.js)
-- Hosted on Vercel
-- Domain: `city.rexio.pro`
-- PWA manifest for installability
+- **Production**: Hosted on Vercel
+  - Domain: `city.rexio.pro`
+  - PWA manifest for installability
+- **Dev preview**: Self-hosted on home server via Cloudflare Tunnel
+  - Domain: `dev-city.rexio.pro`
+  - Runs on port 3800 (not the default 3000)
+  - Use `npm run build && npm run start:preview` to start
+  - Note: Vercel Hobby plan daily deploy limits were exhausted, moved to self-hosted
+  - **All testing must be done on this self-hosted preview, not just localhost**
 
 ### Backend (Go)
 - Hosted on Hetzner VPS via Cloudflare Tunnel

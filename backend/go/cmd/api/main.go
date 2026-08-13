@@ -66,13 +66,29 @@ func main() {
 
 	// ── Public post endpoints (no auth required) ─────────────────
 	postHandler := handlers.NewPostHandler()
+	app.Get("/api/posts", postHandler.ListPosts)
 	app.Get("/api/posts/:id", postHandler.GetPost)
 	app.Get("/api/posts/:id/comments", postHandler.GetPostComments)
+
+	userHandler := handlers.NewUserHandler()
+	followHandler := handlers.NewFollowHandler()
 
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
 	protected.Use(middleware.CSRF(cfg.CSRFSecret))
+
+	// Exact route /api/users/me must be registered BEFORE wildcard /api/users/:username
+	protected.Get("/users/me", userHandler.GetCurrentUser)
+	protected.Patch("/users/me", userHandler.UpdateUser)
+	protected.Get("/search", userHandler.SearchUsers)
+
+	// ── Public user/profile endpoints (no auth required) ─────────
+	app.Get("/api/users/:username", userHandler.GetUser)
+	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
+	app.Get("/api/users/:id/following", followHandler.GetFollowing)
 
 	// Session management (auth required)
 	protected.Get("/auth/sessions", authHandler.ListSessions)
@@ -80,16 +96,8 @@ func main() {
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Post("/auth/logout-all", authHandler.LogoutAll)
 
-	// User routes
-	userHandler := handlers.NewUserHandler()
-	protected.Get("/users/me", userHandler.GetCurrentUser)
-	protected.Patch("/users/me", userHandler.UpdateUser)
-	protected.Get("/users/:username", userHandler.GetUser)
-	protected.Get("/search", userHandler.SearchUsers)
-
 	// Post routes
 	protected.Post("/posts", postHandler.CreatePost)
-	protected.Get("/posts", postHandler.ListPosts)
 	protected.Delete("/posts/:id", postHandler.DeletePost)
 	protected.Post("/posts/:id/like", postHandler.LikePost)
 	protected.Delete("/posts/:id/like", postHandler.UnlikePost)
@@ -103,14 +111,10 @@ func main() {
 	feedHandler := handlers.NewFeedHandler()
 	protected.Get("/feed", feedHandler.ListFeed)
 
-	// Follow routes
-	followHandler := handlers.NewFollowHandler()
+	// Follow routes (auth required for mutations, but GET follow-lists are public)
+	// Note: GetFollowers and GetFollowing are already registered above as public routes.
 	protected.Post("/users/:id/follow", followHandler.FollowUser)
 	protected.Delete("/users/:id/follow", followHandler.UnfollowUser)
-	protected.Get("/users/:id/followers", followHandler.GetFollowers)
-	protected.Get("/users/:id/following", followHandler.GetFollowing)
-	protected.Get("/users/:id/follow-counts", followHandler.GetFollowCounts)
-	protected.Get("/users/:id/is-following", followHandler.IsFollowing)
 
 	// DM routes
 	dmHandler := handlers.NewDMHandler()

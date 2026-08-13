@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -275,18 +276,18 @@ func (h *AuthHandler) Health(c *fiber.Ctx) error {
 /* ── Cookie Helpers ─────────────────────────────────────────────── */
 
 // setRefreshCookie sets the httpOnly refresh token cookie.
-// SameSite=Strict prevents CSRF from sending this cookie cross-origin.
 func setRefreshCookie(c *fiber.Ctx, rawToken string, cfg *config.Config) {
 	c.Cookie(&fiber.Cookie{
 		Name:     refreshCookieName,
 		Value:    rawToken,
-		Path:     "/api/auth", // scoped: only sent to auth endpoints
+		Path:     "/",
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Now().Add(cfg.RefreshExpiry),
 		Secure:   cfg.CookieSecure,
-		HTTPOnly: true,         // JS cannot read this
+		HTTPOnly: true,
 		SameSite: "Strict",
 	})
+	clearLegacyRefreshCookie(c, cfg)
 }
 
 // clearRefreshCookie deletes the refresh token cookie by expiring it.
@@ -294,11 +295,28 @@ func clearRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
 	c.Cookie(&fiber.Cookie{
 		Name:     refreshCookieName,
 		Value:    "",
-		Path:     "/api/auth",
+		Path:     "/",
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Unix(0, 0),
 		Secure:   cfg.CookieSecure,
 		HTTPOnly: true,
 		SameSite: "Strict",
 	})
+	clearLegacyRefreshCookie(c, cfg)
+}
+
+// clearLegacyRefreshCookie expires the old rexio_refresh cookie set at path=/api/auth.
+func clearLegacyRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
+	domainAttr := ""
+	if cfg.CookieDomain != "" {
+		domainAttr = fmt.Sprintf("; Domain=%s", cfg.CookieDomain)
+	}
+	secureAttr := ""
+	if cfg.CookieSecure {
+		secureAttr = "; Secure"
+	}
+	// Manually append the Set-Cookie header so Fiber doesn't overwrite the primary cookie
+	cookieHeader := fmt.Sprintf("%s=; Path=/api/auth%s; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly%s; SameSite=Strict",
+		refreshCookieName, domainAttr, secureAttr)
+	c.Append("Set-Cookie", cookieHeader)
 }

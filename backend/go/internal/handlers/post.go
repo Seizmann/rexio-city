@@ -47,7 +47,7 @@ func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
+			"error":   fiber.Map{"code": "INVALID_INPUT", "message": "Invalid request body"},
 		})
 	}
 
@@ -60,7 +60,7 @@ func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error": fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
+			"error":   fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()},
 		})
 	}
 

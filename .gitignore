@@ -1,3 +1,4 @@
+/tmp
 # Python
 __pycache__/
 *.py[cod]
@@ -49,3 +50,5 @@ coverage/
 
 # Go binaries
 backend/go/bin/
+backend/go/internal/handlers/uploads/
+frontend/tsconfig.tsbuildinfo

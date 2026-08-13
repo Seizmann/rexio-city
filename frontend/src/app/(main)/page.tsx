@@ -28,9 +28,10 @@ export default function HomePage() {
   const { data: posts, loading: feedLoading } = useCachedFetch<Post[]>(
     `feed-${activeTab}-page1`,
     async () => {
-      const res = await api.get<{ data: Post[] }>(`${API.FEED}?tab=${activeTab}&page=1`);
+      const res = await api.get<Post[]>(`${API.FEED}?tab=${activeTab}&page=1`);
+      // Backend returns data directly as the posts array
       if (res.success && res.data) {
-        return res.data.data ?? [];
+        return res.data;
       }
       return [];
     },

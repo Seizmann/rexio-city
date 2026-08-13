@@ -53,6 +53,13 @@ export function useCachedFetch<T>(
   const isSubscribedRef = useRef(true);
   const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
+  // Reset state when key is empty/falsy
+  useEffect(() => {
+    if (key) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState({ data: null, loading: false, error: null });
+  }, [key]);
+
   // Single effect that handles both initial load and cache hits
   useEffect(() => {
     isSubscribedRef.current = true;
