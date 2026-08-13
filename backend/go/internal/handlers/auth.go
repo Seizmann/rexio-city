@@ -278,14 +278,14 @@ func (h *AuthHandler) Health(c *fiber.Ctx) error {
 // SameSite=Strict prevents CSRF from sending this cookie cross-origin.
 // Path="/" ensures the cookie is sent to all endpoints (needed for token refresh).
 func setRefreshCookie(c *fiber.Ctx, rawToken string, cfg *config.Config) {
-	c.Cookie(&fiber.Cookie{\
+	c.Cookie(&fiber.Cookie{
 		Name:     refreshCookieName,
 		Value:    rawToken,
 		Path:     "/", // Send to ALL endpoints (needed for token refresh)
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Now().Add(cfg.RefreshExpiry),
 		Secure:   cfg.CookieSecure,
-		HTTPOnly: true,         // JS cannot read this
+		HTTPOnly: true, // JS cannot read this
 		SameSite: "Strict",
 	})
 }
