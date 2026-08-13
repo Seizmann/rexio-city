@@ -276,11 +276,12 @@ func (h *AuthHandler) Health(c *fiber.Ctx) error {
 
 // setRefreshCookie sets the httpOnly refresh token cookie.
 // SameSite=Strict prevents CSRF from sending this cookie cross-origin.
+// Path="/" ensures the cookie is sent to all endpoints (needed for token refresh).
 func setRefreshCookie(c *fiber.Ctx, rawToken string, cfg *config.Config) {
-	c.Cookie(&fiber.Cookie{
+	c.Cookie(&fiber.Cookie{\
 		Name:     refreshCookieName,
 		Value:    rawToken,
-		Path:     "/api/auth", // scoped: only sent to auth endpoints
+		Path:     "/", // Send to ALL endpoints (needed for token refresh)
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Now().Add(cfg.RefreshExpiry),
 		Secure:   cfg.CookieSecure,
@@ -294,7 +295,7 @@ func clearRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
 	c.Cookie(&fiber.Cookie{
 		Name:     refreshCookieName,
 		Value:    "",
-		Path:     "/api/auth",
+		Path:     "/", // Match the path set in setRefreshCookie
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Unix(0, 0),
 		Secure:   cfg.CookieSecure,
