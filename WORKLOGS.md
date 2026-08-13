@@ -27,3 +27,21 @@
 - Messages and Notifications pages don't exist yet (routes `/messages` and `/notifications` not implemented)
 - When those pages are created, apply the same `useCachedFetch` pattern
 - Cache TTL is 5 minutes — can be adjusted in `cache.ts` if needed
+
+### Done:
+- ✅ Created in-memory cache layer (`cache.ts`) with 5-minute TTL
+- ✅ Created `useCachedFetch` hook with stale-while-revalidate pattern
+- ✅ Updated Feed page (`/`) to use cached fetch — shows cached data immediately on repeat visits
+- ✅ Updated Profile page (`/[username]`) to use cached fetch — same improvement
+- ✅ Cache invalidation on post submit and post updates
+- ✅ TypeScript type-check passes
+- ✅ ESLint passes (0 errors, only pre-existing warnings)
+- ✅ Next.js build succeeds
+- ✅ Commit pushed to `dev` branch (commit `6de997a`)
+
+### Left incomplete:
+- Messages page (`/messages`) and Notifications page (`/notifications`) don't exist yet — will need caching when implemented
+
+### Notes for next agent:
+- The cache is in-memory only (per-page refresh clears it). This is intentional for V1.
+- If backend latency becomes an issue, profile page also does concurrent fetches for user data, follow counts, and posts — consider batching these if needed.
