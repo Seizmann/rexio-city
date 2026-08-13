@@ -58,8 +58,8 @@ export default function ProfilePage() {
         if (res.success && res.data) {
           if (Array.isArray(res.data)) {
             setPosts(res.data);
-          } else if (typeof res.data === 'object' && 'data' in res.data && Array.isArray((res.data as { data: Post[] }).data)) {
-            setPosts((res.data as { data: Post[] }).data);
+          } else if ('data' in res.data && Array.isArray(res.data.data)) {
+            setPosts(res.data.data);
           } else {
             setPosts([]);
           }

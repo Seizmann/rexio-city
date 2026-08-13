@@ -529,3 +529,27 @@ curl -s https://dev-city.rexio.pro/api/users/irin
 - `backend/go/cmd/api/main.go` - Reordered route registration
 
 ---
+## [2026-08-13 22:46, GMT+6] — Agent: Kilo — Model: agnes-2.0-flash
+### Picking up:
+- Read AGENTS.md, rexio-city-v1.md (PRD), DESIGN.md, DECISIONS.md
+- Read last 5 entries of WORKLOGS.md
+- Read TESTING.md and .env.example
+
+### Plan for this session:
+- Awaiting user task
+
+---
+
+## [2026-08-13 22:47, GMT+6] — Agent: Kilo — Model: agnes-2.0-flash
+### Task:
+- User asked to check if local frontend is running
+
+### Status:
+- Frontend: running on port 3800 (persistent background process)
+- Tunnel: cloudflared active, https://dev-city.rexio.pro returns 200 OK
+- Backend: docker-backend-1 running, /api/health returns healthy
+
+### Notes for next agent:
+- Frontend started via `npm run start:preview` in background (persistent)
+- To restart frontend manually: `cd frontend && npm run start:preview`
+- To restart backend: `docker restart docker-backend-1`

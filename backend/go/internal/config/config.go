@@ -36,22 +36,22 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		Port:          getEnv("PORT", "10800"),
-		DatabaseURL:   getEnv("DATABASE_URL", "postgresql://rexio:rexio@localhost:5432/rexiocity"),
-		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379"),
-		JWTSecret:     getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		JWTExpiry:     parseDuration("JWT_EXPIRY", "15m"),
-		RefreshSecret: getEnv("REFRESH_SECRET", "dev-refresh-secret-change-in-production"),
-		RefreshExpiry: parseDuration("REFRESH_EXPIRY", "720h"), // 30 days
-		FrontendURL:   getEnv("FRONTEND_URL", "http://localhost:3000"),
-		AdminURL:      getEnv("ADMIN_URL", "http://localhost:5173"),
-		MediaEndpoint: getEnv("MEDIA_ENDPOINT", "http://localhost:9000"),
-		MediaBucket:   getEnv("MEDIA_BUCKET", "rexio-city"),
+		Port:           getEnv("PORT", "10800"),
+		DatabaseURL:    getEnv("DATABASE_URL", "postgresql://rexio:rexio@localhost:5432/rexiocity"),
+		RedisURL:       getEnv("REDIS_URL", "redis://localhost:6379"),
+		JWTSecret:      getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		JWTExpiry:      parseDuration("JWT_EXPIRY", "15m"),
+		RefreshSecret:  getEnv("REFRESH_SECRET", "dev-refresh-secret-change-in-production"),
+		RefreshExpiry:  parseDuration("REFRESH_EXPIRY", "720h"), // 30 days
+		FrontendURL:    getEnv("FRONTEND_URL", "http://localhost:3000"),
+		AdminURL:       getEnv("ADMIN_URL", "http://localhost:5173"),
+		MediaEndpoint:  getEnv("MEDIA_ENDPOINT", "http://localhost:9000"),
+		MediaBucket:    getEnv("MEDIA_BUCKET", "rexio-city"),
 		MediaAccessKey: getEnv("MEDIA_ACCESS_KEY", "minioadmin"),
 		MediaSecretKey: getEnv("MEDIA_SECRET_KEY", "minioadmin"),
-		MediaURL:      getEnv("MEDIA_URL", "http://localhost:9000"),
+		MediaURL:       getEnv("MEDIA_URL", "http://localhost:9000"),
 
-		CookieDomain: getEnv("COOKIE_DOMAIN", ""),     // empty = current host (works for localhost)
+		CookieDomain: getEnv("COOKIE_DOMAIN", ""),        // empty = current host (works for localhost)
 		CookieSecure: getEnvBool("COOKIE_SECURE", false), // set true in production
 
 		CSRFSecret: getEnv("CSRF_SECRET", "dev-csrf-secret-change-in-production"),
@@ -89,4 +89,3 @@ func parseDuration(key, defaultVal string) time.Duration {
 	}
 	return d
 }
-
