@@ -86,7 +86,7 @@
 - ✅ Added `start:preview` script to package.json
 - ✅ Updated PRD (rexio-city-v1.md) with self-hosted dev preview info
 - ✅ Added D9 decision to DECISIONS.md
-- ✅ All changes pushed to dev branch
+- ✅ All changes pushed to dev branch (commit `6e23f80`)
 
 ### Left incomplete:
 - None — this task is complete
@@ -95,3 +95,33 @@
 - `frontend/package.json` (added `start:preview` script)
 - `rexio-city-v1.md` (updated deployment docs)
 - `DECISIONS.md` (added D9 decision)
+
+---
+
+## [2026-08-13 17:30, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested updating PRD, AGENTS.md, and DECISIONS.md with new rules
+- Add rule: NO push without manual user approval
+
+### Tasks completed:
+1. Updated `AGENTS.md` Section 2 — added rule: NEVER push without explicit user approval
+2. Updated `rexio-city-v1.md` — confirmed deployment docs are current (already updated in previous session)
+3. Added D10 to `DECISIONS.md` — Manual Approval Required Before Push
+4. Verified tunnel is working at https://dev-city.rexio.pro
+
+### Notes for next agent:
+- All pushes to dev branch now require explicit user approval
+- Tunnel credentials remain in ~/.cloudflared/ — never commit them
+- Frontend dev preview runs on port 3800 via `npm run start:preview`
+
+### Done:
+- ✅ Updated AGENTS.md with manual approval rule
+- ✅ Added D10 decision to DECISIONS.md
+- ✅ Verified tunnel is working
+
+### Left incomplete:
+- None — pending user approval to push commits
+
+### Files modified:
+- `AGENTS.md` (added manual approval rule)
+- `DECISIONS.md` (added D10 decision)

@@ -28,6 +28,7 @@ Only one agent works on this repository at any given time. You do not need to ha
 ## 2. Branching Rules — Non-Negotiable
 
 - **Always push to `dev`. Never push directly to `main`.**
+- **NEVER push to dev (or any branch) without explicit user approval.** Before any `git push`, you MUST ask the user for confirmation. Do not auto-push.
 - `main` is only updated via a manual pull request that the human project owner (Sijan) reviews and merges himself.
 - Before pushing, run all applicable checks locally if possible (build, vet, lint, test) — do not rely solely on CI to catch basic errors.
 

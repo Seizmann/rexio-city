@@ -116,4 +116,20 @@ Record of binding architecture decisions for the RexiO City project. Do not sile
 
 ---
 
+## D10: Manual Approval Required Before Push
+
+**Decision:** No `git push` to any branch (dev, main, or otherwise) may be performed without explicit user confirmation.
+
+**Rationale:** Prevents accidental or automated pushes that could break production or waste CI resources. The user must always explicitly approve before code is pushed.
+
+**What changed:**
+- All push operations must ask for user confirmation first
+- Do not auto-push even when all checks pass
+- Use `clarify` tool to ask for approval before executing `git push`
+
+**Status:** Active
+**Date:** 2026-08-13
+
+---
+
 *Record all future decisions here with date, status, and rationale.*
