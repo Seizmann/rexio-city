@@ -79,6 +79,7 @@ export default function HomePage() {
       debugLog('upload', `Starting post: ${files.length} file(s), content: ${content.slice(0, 30)}...`);
       debugLog('auth', `User: ${user?.username}, Token: ${!!getAccessToken()}`);
       console.log('[DEBUG] === POST ATTEMPT STARTED ===');
+      console.log('[DEBUG] Access token length:', getAccessToken()?.length || 0);
 
       const localPreviews = files.map(({ file, type }) => ({
         previewUrl: URL.createObjectURL(file),

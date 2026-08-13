@@ -269,6 +269,7 @@ export const api = {
 
     // Log the request for debugging
     console.log('[api.upload] Starting upload:', path, 'hasToken:', !!token, 'hasCSRF:', !!csrf);
+    console.log('[api.upload] Headers:', JSON.stringify(headers));
 
     let response = await fetch(path, {
       method: 'POST',
@@ -277,11 +278,12 @@ export const api = {
       credentials: 'include',
     });
 
-    console.log('[api.upload] Response status:', response.status);
+    console.log('[api.upload] Response status:', response.status, 'content-type:', response.headers.get('content-type'));
 
     // Check for 431 (header too large) — Vercel returns plain text, not JSON
     if (response.status === 431) {
       const text = await response.text();
+      console.error('[api.upload] 431 Response:', text.slice(0, 200));
       throw new Error(text.includes('Request Header') ? 'Request headers too large. Please clear cookies and try again.' : text);
     }
 
