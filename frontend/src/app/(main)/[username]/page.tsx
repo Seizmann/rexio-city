@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { API } from '@/lib/constants';
+import { useCachedFetch } from '@/lib/useCachedFetch';
 import type { User, Post, FollowCounts } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -18,71 +19,71 @@ export default function ProfilePage() {
   const username = rawUsername?.startsWith('@') ? rawUsername.slice(1) : rawUsername;
   const { user: authUser } = useAuth();
 
-  const [user, setUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [activeTab, setActiveTab] = useState('posts');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  // Use cached fetch for profile user data
+  const { data: user, loading: userLoading } = useCachedFetch<User | null>(
+    `profile-${username}`,
+    async () => {
+      const res = await api.get<User>(API.USER(username));
+      return res.success && res.data ? res.data : null;
+    },
+    {
+      dependencies: [username, refreshTrigger],
+      onSuccess: (userData) => {
+        if (userData && authUser) {
+          // Fetch follow status in background
+          void api
+            .get<{ is_following: boolean }>(API.IS_FOLLOWING(userData.id))
+            .then((res) => {
+              if (res.success && res.data) {
+                setIsFollowing(res.data.is_following);
+              }
+            })
+            .catch(() => {
+              // Ignore errors
+            });
+        }
+      },
+    },
+  );
+
+  // Use cached fetch for user posts
+  const { data: posts, loading: postsLoading } = useCachedFetch<Post[]>(
+    `posts-${username}`,
+    async () => {
+      if (!user) return [];
+      const res = await api.get<Post[]>(`${API.POSTS}?user_id=${user.id}`);
+      return res.success && res.data ? res.data : [];
+    },
+    {
+      dependencies: [username, refreshTrigger, user?.id],
+    },
+  );
+
   const [followCounts, setFollowCounts] = useState<FollowCounts>({
     follower_count: 0,
     following_count: 0,
   });
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('posts');
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Fetch follow counts when user is loaded
   useEffect(() => {
-    if (!username) return;
-    let isSubscribed = true;
-
+    if (!user) return;
     api
-      .get<User>(API.USER(username))
-      .then(async (userRes) => {
-        if (!isSubscribed) return;
-        if (!userRes.success || !userRes.data) {
-          setError('This account does not exist.');
-          setLoading(false);
-          return;
+      .get<FollowCounts>(API.FOLLOW_COUNTS(user.id))
+      .then((res) => {
+        if (res.success && res.data) {
+          setFollowCounts(res.data);
         }
-
-        const profileUser = userRes.data;
-        setUser(profileUser);
-
-        const [countsRes, followingRes, postsRes] = await Promise.all([
-          api.get<FollowCounts>(API.FOLLOW_COUNTS(profileUser.id)),
-          authUser
-            ? api.get<{ is_following: boolean }>(
-                API.IS_FOLLOWING(profileUser.id),
-              )
-            : Promise.resolve({
-                success: true,
-                data: { is_following: false },
-              }),
-          api.get<Post[]>(`${API.POSTS}?user_id=${profileUser.id}`),
-        ]);
-
-        if (!isSubscribed) return;
-        if (countsRes.success && countsRes.data) {
-          setFollowCounts(countsRes.data);
-        }
-        if (followingRes.success && followingRes.data) {
-          setIsFollowing(followingRes.data.is_following);
-        }
-        if (postsRes.success && postsRes.data) {
-          setPosts(postsRes.data);
-        }
-        setLoading(false);
       })
-      .catch((err: unknown) => {
-        if (!isSubscribed) return;
-        console.error('Error fetching profile:', err);
-        setError('An error occurred while loading the profile.');
-        setLoading(false);
+      .catch(() => {
+        // Ignore errors
       });
+  }, [user]);
 
-    return () => {
-      isSubscribed = false;
-    };
-  }, [username, authUser, refreshTrigger]);
+  const loading = userLoading || postsLoading;
 
   function handleEditProfile() {
     setRefreshTrigger((prev) => prev + 1);
@@ -97,11 +98,11 @@ export default function ProfilePage() {
     );
   }
 
-  if (error || !user) {
+  if (!user) {
     return (
       <div className={styles.errorState}>
         <h2>Profile Not Found</h2>
-        <p>{error || 'This account does not exist.'}</p>
+        <p>This account does not exist.</p>
       </div>
     );
   }
@@ -123,7 +124,7 @@ export default function ProfilePage() {
       <div className={styles.content}>
         {activeTab === 'posts' && (
           <div className={styles.feed}>
-            {posts.length > 0 ? (
+            {posts && posts.length > 0 ? (
               posts.map((post) => <PostCard key={post.id} post={post} />)
             ) : (
               <div className={styles.emptyState}>
@@ -144,7 +145,7 @@ export default function ProfilePage() {
 
         {activeTab === 'media' && (
           <div className={styles.feed}>
-            {posts.filter((p) => p.media && p.media.length > 0).length > 0 ? (
+            {posts && posts.filter((p) => p.media && p.media.length > 0).length > 0 ? (
               posts
                 .filter((p) => p.media && p.media.length > 0)
                 .map((post) => <PostCard key={post.id} post={post} />)

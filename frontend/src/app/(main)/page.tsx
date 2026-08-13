@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import LandingAuth from '@/components/auth/LandingAuth';
 import FeedTabs from '@/components/feed/FeedTabs';
@@ -11,62 +11,48 @@ import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
 import { API } from '@/lib/constants';
+import { invalidateCache } from '@/lib/cache';
+import { useCachedFetch } from '@/lib/useCachedFetch';
 import type { Post } from '@/lib/types';
 import { compressImage } from '@/lib/compression';
 
 export default function HomePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'following' | 'foryou'>('foryou');
-  const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
-  const [feedLoading, setFeedLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  // Fetch feed posts when activeTab changes (only if authenticated).
-  // setFeedLoading is called inside the async callback, not synchronously
-  // in the effect body, to satisfy react-hooks/set-state-in-effect.
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let isSubscribed = true;
-
-    // Kick off loading state via a microtask so it's not synchronous in the effect
-    void Promise.resolve().then(() => {
-      if (isSubscribed) setFeedLoading(true);
-    });
-
-    api
-      .get<Post[]>(`${API.FEED}?tab=${activeTab}&page=1`)
-      .then((res) => {
-        if (!isSubscribed) return;
-        if (res.success && res.data) {
-          setPosts(res.data);
-          setHasMore(res.data.length > 0);
-        }
+  // Use cached fetch for feed data - shows cached data immediately on repeat visits
+  const { data: posts, loading: feedLoading } = useCachedFetch<Post[]>(
+    `feed-${activeTab}-page1`,
+    async () => {
+      const res = await api.get<{ data: Post[] }>(`${API.FEED}?tab=${activeTab}&page=1`);
+      if (res.success && res.data) {
+        return res.data.data ?? [];
+      }
+      return [];
+    },
+    {
+      dependencies: [activeTab, isAuthenticated],
+      onSuccess: (data) => {
+        setHasMore(data.length > 0);
         setPage(1);
-        setFeedLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (!isSubscribed) return;
-        console.error('Failed to fetch feed:', err);
-        setFeedLoading(false);
-      });
+      },
+    },
+  );
 
-    return () => {
-      isSubscribed = false;
-    };
-  }, [activeTab, isAuthenticated]);
+  const safePosts = posts ?? [];
 
   /**
    * Called by PostComposer when the user clicks "Post".
    * Must be defined before early returns to satisfy rules-of-hooks.
    *
    * Flow:
-   * 1. Instantly add a pending placeholder at the top of the feed.
-   * 2. Upload files to R2 in background, updating status label.
-   * 3. Create the post record on the server.
-   * 4. Replace the placeholder with the confirmed post.
+   * 1. Upload files to R2 in background.
+   * 2. Create the post record on the server.
+   * 3. Invalidate cache so feed refreshes with new post.
    */
   const handlePostSubmit = useCallback(
     async (payload: {
@@ -74,44 +60,7 @@ export default function HomePage() {
       files: { file: File; type: 'photo' | 'video' }[];
       pendingKey: string;
     }) => {
-      const { content, files, pendingKey } = payload;
-
-      const localPreviews = files.map(({ file, type }) => ({
-        previewUrl: URL.createObjectURL(file),
-        type,
-      }));
-
-      const resolvedUser = user
-        ? {
-            id: user.id,
-            username: user.username,
-            display_name: user.display_name,
-            avatar_url: user.avatar_url,
-          }
-        : undefined;
-
-      const pendingPost: Post = {
-        id: 0,
-        user_id: user?.id ?? 0,
-        user: resolvedUser,
-        content,
-        media: [],
-        created_at: new Date().toISOString(),
-        _pending: true,
-        _uploadStatus: files.length > 0 ? 'uploading' : 'finishing',
-        _localPreviews: localPreviews,
-        _pendingKey: pendingKey,
-      };
-
-      setPosts((prev) => [pendingPost, ...prev]);
-
-      const updateStatus = (status: Post['_uploadStatus']) => {
-        setPosts((prev) =>
-          prev.map((p) =>
-            p._pendingKey === pendingKey ? { ...p, _uploadStatus: status } : p,
-          ),
-        );
-      };
+      const { content, files } = payload;
 
       try {
         const mediaUrls: string[] = [];
@@ -133,7 +82,7 @@ export default function HomePage() {
             }
 
             // Step 2: Request presigned URL from backend
-            const requestRes = await api.post<{ url: string; media_url: string; key: string }>(
+            const requestRes = await api.post<{ url: string; key: string }>(
               API.MEDIA_UPLOAD_REQUEST,
               {
                 filename: uploadFile.name,
@@ -173,12 +122,9 @@ export default function HomePage() {
             mediaUrls.push(completeRes.data.url);
             mediaTypes.push(type);
           }
-          updateStatus('updating');
         }
 
-        updateStatus('finishing');
-
-        const res = await api.post<Post & { post?: Post }>(API.POSTS, {
+        const res = await api.post<Post>(API.POSTS, {
           content,
           media_urls: mediaUrls,
           media_types: mediaTypes,
@@ -188,34 +134,16 @@ export default function HomePage() {
           throw new Error(res.error?.message || 'Failed to create post');
         }
 
-        // Safely unwrap raw post object whether backend returns { post: Post } or Post directly
-        const rawPost: Post = (res.data.post && typeof res.data.post === 'object') ? res.data.post : res.data;
-
-        const confirmedPost: Post = {
-          ...rawPost,
-          user: rawPost.user?.username ? rawPost.user : resolvedUser,
-        };
-
-        localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-
-        setPosts((prev) =>
-          prev.map((p) =>
-            p._pendingKey === pendingKey ? confirmedPost : p,
-          ),
-        );
+        // Invalidate feed cache so it refreshes with the new post
+        invalidateCache(`feed-${activeTab}-page1`);
       } catch (err) {
         console.error('Post creation failed:', err);
-        localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-        updateStatus('error');
         // Show user-facing error message
         const errorMsg = err instanceof Error ? err.message : 'Failed to post. Please try again.';
         showToast(errorMsg, 'error');
-        setTimeout(() => {
-          setPosts((prev) => prev.filter((p) => p._pendingKey !== pendingKey));
-        }, 3000);
       }
     },
-    [user],
+    [activeTab, showToast],
   );
 
   if (isLoading) return null;
@@ -228,7 +156,6 @@ export default function HomePage() {
       .get<Post[]>(`${API.FEED}?tab=${activeTab}&page=${nextPage}`)
       .then((res) => {
         if (res.success && res.data) {
-          setPosts((prev) => [...prev, ...res.data]);
           setHasMore(res.data.length > 0);
           setPage(nextPage);
         }
@@ -239,12 +166,6 @@ export default function HomePage() {
       .finally(() => {
         setLoadingMore(false);
       });
-  }
-
-  function handlePostUpdate(updatedPost: Post) {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)),
-    );
   }
 
   return (
@@ -258,7 +179,7 @@ export default function HomePage() {
           <PostCardSkeleton />
           <PostCardSkeleton />
         </>
-      ) : posts.length === 0 ? (
+      ) : safePosts.length === 0 ? (
         <div
           style={{
             padding: 'var(--space-6) var(--space-4)',
@@ -271,15 +192,14 @@ export default function HomePage() {
         </div>
       ) : (
         <div>
-          {posts.map((post, idx) => (
+          {safePosts.map((post, idx) => (
             <PostCard
               key={post._pendingKey ?? (post.id ? `post-${post.id}` : `post-idx-${idx}`)}
               post={post}
-              onUpdate={handlePostUpdate}
             />
           ))}
 
-          {hasMore && posts.filter((p) => !p._pending).length > 0 && (
+          {hasMore && safePosts.filter((p) => !p._pending).length > 0 && (
             <div
               style={{
                 padding: 'var(--space-4)',
