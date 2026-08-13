@@ -92,4 +92,28 @@ Record of binding architecture decisions for the RexiO City project. Do not sile
 
 ---
 
+## D9: Dev Preview Frontend Moved to Self-Hosted
+
+**Decision:** Move dev preview frontend from Vercel to self-hosted on home server via Cloudflare Tunnel on port 3800.
+
+**Rationale:** Vercel Hobby plan daily deployment limit was exhausted, preventing preview deployments. Production remains on Vercel as it has sufficient limits.
+
+**What changed:**
+- Dev preview (`dev-city.rexio.pro`) now served from home server via Cloudflare Tunnel
+- Frontend runs on port 3800 (not default 3000)
+- Build command: `npm run build` followed by `npm run start:preview`
+- Added `start:preview` script to `frontend/package.json`
+
+**What did NOT change:**
+- Production frontend (`city.rexio.pro`) remains on Vercel
+- Admin panel (`oppscity.rexio.pro`) remains on Vercel
+- Backend deployment unchanged
+
+**Reversibility:** This change is reversible if Vercel plan is upgraded later. Simply redeploy to Vercel and remove the self-hosted tunnel configuration.
+
+**Status:** Active
+**Date:** 2026-08-13
+
+---
+
 *Record all future decisions here with date, status, and rationale.*

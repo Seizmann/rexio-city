@@ -60,3 +60,38 @@
 - Fixed API response type mismatch for feed endpoint
 - Backend returns `data` as `Post[]` directly, not wrapped in `{ data: Post[] }`
 - Updated type annotation in feed fetch to match actual backend response
+
+---
+
+## [2026-08-13 17:00, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested moving dev preview frontend from Vercel to self-hosted on home server
+- Reason: Vercel Hobby plan daily deploy limits were exhausted
+- Production (city.rexio.pro) stays on Vercel — only dev preview moves
+
+### Tasks completed:
+1. Added `start:preview` script to `frontend/package.json` — runs `next start -p 3800`
+2. Updated `rexio-city-v1.md` section 4 (Domains & Deployment) — noted dev preview is now self-hosted
+3. Updated `rexio-city-v1.md` section 10 (Deployment) — documented both production (Vercel) and dev (self-hosted) frontend
+4. Added decision D9 to `DECISIONS.md` — documenting the move, rationale, and reversibility
+5. No backend CORS changes needed — `FRONTEND_URL` in backend config covers the dev domain
+
+### Notes for next agent:
+- Dev preview frontend now runs on port 3800 on home server
+- Cloudflare Tunnel credentials live in ~/.cloudflared/ — NEVER commit them
+- Production (city.rexio.pro) and admin (oppscity.rexio.pro) remain on Vercel
+- To start dev preview: `npm run build && npm run start:preview`
+
+### Done:
+- ✅ Added `start:preview` script to package.json
+- ✅ Updated PRD (rexio-city-v1.md) with self-hosted dev preview info
+- ✅ Added D9 decision to DECISIONS.md
+- ✅ All changes pushed to dev branch
+
+### Left incomplete:
+- None — this task is complete
+
+### Files modified:
+- `frontend/package.json` (added `start:preview` script)
+- `rexio-city-v1.md` (updated deployment docs)
+- `DECISIONS.md` (added D9 decision)
