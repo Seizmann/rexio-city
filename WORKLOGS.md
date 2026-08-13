@@ -119,24 +119,25 @@
 - Mobile camera photos (5-15MB) now work after client-side compression
 
 ### Deployment Status:
-- **Production** (https://city.rexio.pro): ✅ Working
-  - /api/media/upload-request: Returns 401 without auth (expected)
-  - /api/media/upload-complete: Returns 401 without auth (expected)
-  - /api/media/upload: Still works for backward compatibility
-- **Dev** (https://dev-city.rexio.pro): ⚠️ Behind Vercel SSO lock
-  - 404 errors due to Vercel authentication requirement
-  - This is a Vercel project setting, not a code issue
-  - Use production URL for testing
+- **Production Frontend** (https://city.rexio.pro): ✅ Working
+  - /api/media/upload-request: Returns 400 (backend not deployed yet)
+  - /api/media/upload-complete: Returns 400 (backend not deployed yet)
+  - /api/media/upload: Still works (legacy)
+- **Local Backend** (http://localhost:10888): ✅ Working
+  - All new endpoints work correctly
+  - Docker rebuild successful with Go 1.25
+- **Railway Production Backend** (https://citydev.rexio.pro): ❌ Not deployed yet
+  - Needs rebuild to include new endpoints
+  - Current version doesn't have upload-request/upload-complete routes
 
 ### Endpoints Summary:
 | Endpoint | Auth | Status |
 |----------|------|--------|
-| POST /api/media/upload-request | JWT | ✅ Working (401 without auth) |
-| POST /api/media/upload-complete | JWT | ✅ Working (401 without auth) |
+| POST /api/media/upload-request | JWT | ✅ Local, ❌ Railway (pending) |
+| POST /api/media/upload-complete | JWT | ✅ Local, ❌ Railway (pending) |
 | POST /api/media/upload | JWT | ✅ Working (legacy) |
 
-### Next Steps for Testing:
-1. Login to get JWT token
-2. Use token in Authorization header
-3. Test upload flow on production URL
-4. Test on mobile device with 13MB camera photo
+### Next Steps:
+1. Deploy backend to Railway (build should now succeed with Go 1.25)
+2. Test presigned URL flow on production
+3. Verify mobile photo uploads work
