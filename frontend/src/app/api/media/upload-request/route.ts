@@ -21,18 +21,24 @@ const BACKEND_URL =
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+interface UploadRequest {
+  filename: string;
+  content_type: string;
+  size: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const targetUrl = `${BACKEND_URL}/api/media/upload-request`;
 
     // Parse the JSON body to validate it
     const bodyText = await request.text();
-    
+
     // Parse and validate the JSON
-    let parsedBody;
+    let parsedBody: UploadRequest | null = null;
     try {
-      parsedBody = JSON.parse(bodyText);
-    } catch (parseError) {
+      parsedBody = JSON.parse(bodyText) as UploadRequest;
+    } catch {
       return NextResponse.json(
         {
           success: false,
@@ -69,15 +75,11 @@ export async function POST(request: NextRequest) {
     if (cookie) forwardHeaders.set('Cookie', cookie);
     forwardHeaders.set('Content-Type', 'application/json');
 
-    console.log(`[upload-request] Forwarding to ${targetUrl}, body: ${bodyText}`);
-
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
       body: bodyText,
     });
-
-    console.log(`[upload-request] Backend response: ${response.status}`);
 
     const responseHeaders = new Headers();
     responseHeaders.set(
@@ -95,7 +97,6 @@ export async function POST(request: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error('[upload-request] Error:', error);
     return NextResponse.json(
       {
         success: false,
