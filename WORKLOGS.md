@@ -51,5 +51,13 @@
 - Error: `413 FUNCTION_PAYLOAD_TOO_LARGE` from Vercel
 - Root cause: `request.arrayBuffer()` buffers entire request in memory → Vercel rejects >4MB
 - Fix: Stream `request.body` directly to backend instead of buffering
-- Added `duplex: 'half'` for Node.js stream support
-- Commit: 55c06bd
+- Added `duplex: 'half' as const` for Node.js stream support
+- Commit: 9399cb5
+- Status: ✅ Deployed, CI passing
+
+### SUMMARY:
+- Root cause was Vercel's 4MB function payload limit, not Next.js body limit
+- Solution: Stream request body directly instead of buffering
+- Frontend deployed to https://city.rexio.pro
+- Backend: no rebuild needed (logic unchanged)
+- Upload now supports files up to 30MB (PRD requirement)
