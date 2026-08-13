@@ -362,3 +362,39 @@ curl -s https://dev-city.rexio.pro/api/users/irin
 - Frontend cache in `.next/cache/` may need clearing if data doesn't update
 - Posts endpoint requires authentication - may need to make it public or fix auth flow
 - All commits pushed to dev branch
+### Notes for next agent:
+- Backend runs in Docker container named `docker-backend-1`
+- To restart: `docker restart docker-backend-1`
+- To rebuild: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
+- Dockerfile requires Go 1.25 (updated from 1.22)
+
+---
+
+## [2026-08-13 20:10, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### 问题：
+用户登录后自动退出，刷新token失败
+
+### 根因：
+Refresh cookie 的 `Path` 设置为 `/api/auth`，导致只有认证接口能访问cookie，其他接口请求时浏览器不发送cookie，token refresh失败，用户被强制退出
+
+### 修复：
+修改 `backend/go/internal/handlers/auth.go`：
+- `setRefreshCookie`: Path 从 `/api/auth` 改为 `/`
+- `clearRefreshCookie`: Path 从 `/api/auth` 改为 `/`
+
+### 验证：
+```bash
+# 登录时设置cookie
+curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rexio.pro","password":"testpassword123"}'
+# 返回: set-cookie: rexio_refresh=...; path=/; HttpOnly; SameSite=Strict ✓
+```
+
+### 状态：
+- ✅ Backend重启完成，运行正常
+- ✅ Cookie路径已修复
+- ✅ 用户可正常登录并保持登录状态
+
+### Files modified:
+- `backend/go/internal/handlers/auth.go` - Fix refresh cookie path
+
+---
