@@ -482,3 +482,50 @@ curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rex
 - ✅ Rebuilt Next.js frontend and restarted preview server on port 3800.
 - ✅ Fix committed: `0ea98e8`.
 
+### Notes for next agent:
+- Backend runs in Docker container named `docker-backend-1`
+- To restart: `docker restart docker-backend-1`
+- To rebuild: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
+- Dockerfile requires Go 1.25 (updated from 1.22)
+- **CRITICAL**: Public routes must be registered BEFORE protected group in main.go (Fiber uses first-match-wins)
+
+---
+
+## [2026-08-13 21:45, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Problem:
+After frontend restart, `/api/users/irin` started returning UNAUTHORIZED
+
+### Root Cause:
+Public routes (`/users/:username`, `/users/:id/*`) were registered AFTER the protected group in `main.go`. Fiber uses first-match-wins routing, so the protected middleware intercepted requests meant for public endpoints.
+
+### Fix:
+Moved public user/profile endpoints to BEFORE the protected group registration:
+```go
+// BEFORE (broken):
+protected := app.Group("/api")
+protected.Use(middleware.Auth(cfg.JWTSecret))
+// ... protected routes ...
+app.Get("/api/users/:username", userHandler.GetUser) // Too late!
+
+// AFTER (fixed):
+app.Get("/api/users/:username", userHandler.GetUser) // First!
+app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+// ... then protected group ...
+```
+
+### Verification:
+```bash
+curl -s https://dev-city.rexio.pro/api/users/irin
+# → {"data":{"username":"irin","follower_count":3,"following_count":2},"success":true} ✓
+```
+
+### Status:
+- ✅ Backend rebuilt and restarted
+- ✅ Public endpoints working without auth
+- ✅ Profile data displaying correctly
+- ✅ All commits pushed to dev
+
+### Files modified:
+- `backend/go/cmd/api/main.go` - Reordered route registration
+
+---
