@@ -139,6 +139,11 @@
 | POST /api/media/upload-complete | JWT | ✅ Local, ❌ Railway (pending) |
 | POST /api/media/upload | JWT | ✅ Working (legacy) |
 
+### Notes for next agent:
+- PRD Section 4 table needs updating — production backend domain is `city-connect.rexio.pro` not `connect2city.spritexai.dpdns.org`
+- Frontend dev (dev-city.rexio.pro) has Vercel SSO lock enabled — disable from Vercel dashboard if needed
+- Frontend .env.production has correct backend URL: `https://citydev.rexio.pro`
+
 ### Next Steps:
 1. Deploy backend to Railway (build should now succeed with Go 1.25)
 2. Test presigned URL flow on production
