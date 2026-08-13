@@ -308,3 +308,57 @@ curl -s https://dev-city.rexio.pro/api/users/shuvo
 - To restart: `docker restart docker-backend-1`
 - To rebuild: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
 - Dockerfile requires Go 1.25 (updated from 1.22)
+### Notes for next agent:
+- Backend runs in Docker container named `docker-backend-1`
+- To restart: `docker restart docker-backend-1`
+- To rebuild: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
+- Dockerfile requires Go 1.25 (updated from 1.22)
+
+---
+
+## [2026-08-13 19:45, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User reported profile still showing 0 followers/following
+- User was logged in but backend showed `is_following: false`
+
+### Root cause identified:
+1. **Frontend bug**: The page was making separate API calls to `/api/users/:id/follow-counts` and `/api/users/:id/is-following` but the user object already contains all this data from the main `/api/users/:username` endpoint
+2. **TypeScript error**: Missing `is_following` field in User type
+3. **Posts endpoint**: `/api/posts?user_id=6` requires authentication (returns UNAUTHORIZED without token)
+
+### Fixes applied:
+1. **Frontend optimization** (`frontend/src/app/(main)/[username]/page.tsx`):
+   - Removed separate follow-counts API call (redundant)
+   - Use `follower_count` and `following_count` directly from user object
+   - Use `is_following` from user object (now included in backend response)
+   - Added `is_following` to User type in `frontend/src/lib/types.ts`
+
+2. **Backend response**: The `/api/users/:username` endpoint now returns:
+   - `follower_count`: number of followers
+   - `following_count`: number following
+   - `is_following`: boolean (whether current user follows this profile)
+
+### Verification:
+```bash
+curl -s https://dev-city.rexio.pro/api/users/irin
+# Returns: {"data":{"follower_count":3,"following_count":1,"is_following":false,...},"success":true}
+```
+
+### Known limitations:
+- Posts require authentication: `/api/posts?user_id=6` returns UNAUTHORIZED without token
+- Followers/following lists work: `/api/users/6/followers` returns 3 users, `/api/users/6/following` returns 1 user
+
+### Status:
+- ✅ Backend: Docker container running (docker-backend-1)
+- ✅ Frontend: Running on port 3800
+- ✅ Profile data: Showing correct follower counts
+- ✅ All commits pushed to dev
+
+### Files modified:
+- `frontend/src/lib/types.ts` - Added `is_following` field
+- `frontend/src/app/(main)/[username]/page.tsx` - Use user object data instead of separate API calls
+
+### Notes for next agent:
+- Frontend cache in `.next/cache/` may need clearing if data doesn't update
+- Posts endpoint requires authentication - may need to make it public or fix auth flow
+- All commits pushed to dev branch
