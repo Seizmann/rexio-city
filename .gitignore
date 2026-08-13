@@ -48,6 +48,17 @@ coverage/
 # Hermes
 .hermes/
 
+# Session logs and project docs
+WORKLOGS.md
+rexio-city-v1.md
+AGENTS.md
+DESIGN.md
+DECISIONS.md
+ROADMAP.md
+BRANDING.md
+TESTING.md
+restart-backend.sh
+
 # Go binaries
 backend/go/bin/
 backend/go/internal/handlers/uploads/
