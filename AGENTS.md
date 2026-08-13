@@ -34,6 +34,41 @@ Only one agent works on this repository at any given time. You do not need to ha
 
 ---
 
+## 2.1 Local Dev Preview Workflow (Home Server)
+
+The dev preview (`dev-city.rexio.pro`) is **self-hosted on the home server** via Cloudflare Tunnel, NOT on Vercel. All testing and verification must happen on this self-hosted preview.
+
+### Setup (one-time):
+```bash
+# Install cloudflared if not already installed
+# Ensure ~/.cloudflared/config.yml has the dev-city.rexio.pro ingress rule
+
+# Start the tunnel (if not already running)
+systemctl --user start cloudflared
+
+# Build and start the frontend
+cd frontend
+npm run build
+npm run start:preview  # Runs on port 3800
+```
+
+### Testing workflow:
+1. Make code changes
+2. Run `npm run build` to verify compilation
+3. Run `npm run start:preview` to start the dev server
+4. Test on **https://dev-city.rexio.pro** (NOT localhost)
+5. Verify all flows work on the public dev preview URL
+6. Note test results in WORKLOGS.md
+
+### Important notes:
+- The tunnel must be running for tests to be valid — always verify `systemctl --user status cloudflared`
+- If tunnel is down, the dev preview will be unreachable
+- Cloudflare Tunnel credentials live in `~/.cloudflared/` — NEVER commit them
+- The tunnel is configured in `~/.cloudflared/config.yml` (outside the repo)
+- Do NOT assume tests on `localhost:3800` are sufficient — always test on `https://dev-city.rexio.pro`
+
+---
+
 ## 3. Secrets — Absolute Rules
 
 - **Never commit `Private-Info.md`.** Never commit any `.env` file. Both must remain in `.gitignore` at all times — if you ever notice either is missing from `.gitignore`, add it immediately as your first action, before any other work.

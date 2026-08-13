@@ -353,6 +353,7 @@ settings (key, value, updated_at)
   - Runs on port 3800 (not the default 3000)
   - Use `npm run build && npm run start:preview` to start
   - Note: Vercel Hobby plan daily deploy limits were exhausted, moved to self-hosted
+  - **All testing must be done on this self-hosted preview, not just localhost**
 
 ### Backend (Go)
 - Hosted on Hetzner VPS via Cloudflare Tunnel

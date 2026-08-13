@@ -125,3 +125,37 @@
 ### Files modified:
 - `AGENTS.md` (added manual approval rule)
 - `DECISIONS.md` (added D10 decision)
+
+---
+
+## [2026-08-13 18:00, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User requested updating all docs to include self-hosted dev preview workflow
+- Goal: Ensure no AI agent makes wrong assumptions about deployment in future sessions
+
+### Tasks completed:
+1. Updated `AGENTS.md` Section 2.1 — added full Local Dev Preview Workflow
+2. Updated `DECISIONS.md` — added D11 documenting self-hosted dev preview
+3. Updated `rexio-city-v1.md` — added note about testing on self-hosted preview
+4. Documented tunnel setup, testing workflow, and verification steps
+
+### Notes for next agent:
+- Dev preview is at https://dev-city.rexio.pro (self-hosted, NOT Vercel)
+- Tunnel runs on port 3800, not 3000
+- Always test on the public URL, not just localhost
+- Tunnel credentials are in ~/.cloudflared/ — never commit them
+- Use `systemctl --user status cloudflared` to check tunnel status
+
+### Done:
+- ✅ Added Local Dev Preview Workflow to AGENTS.md (Section 2.1)
+- ✅ Added D11 decision to DECISIONS.md
+- ✅ Updated PRD deployment section with testing note
+- ✅ All docs now reflect self-hosted dev preview reality
+
+### Left incomplete:
+- None — docs are now complete and accurate
+
+### Files modified:
+- `AGENTS.md` (added Section 2.1 with full workflow)
+- `DECISIONS.md` (added D11)
+- `rexio-city-v1.md` (added testing note in Section 10)
