@@ -48,70 +48,48 @@ Record of binding architecture decisions for the RexiO City project. Do not sile
 
 ---
 
-## D5: DM Encryption is At-Rest Only
+## D5: Cloudflare R2 for Media Storage
 
-**Decision:** DMs are encrypted at rest using AES-256-GCM. NOT end-to-end encrypted.
+**Decision:** All media (photos, videos, avatars) stored in Cloudflare R2, served via CDN (`cdn-city.rexio.pro`).
 
-**Rationale:** E2E encryption requires key exchange protocol that's out of scope for V1. At-rest encryption protects against DB breaches. Product explicitly states "not E2EE" to avoid misrepresentation.
-
-**Status:** Active  
-**Date:** 2026-08-12
-
----
-
-## D6: DB-Driven Configuration
-
-**Decision:** Feature flags, rate limits, and feed scoring weights are stored in a `settings` table, not hardcoded in `.env`.
-
-**Rationale:** Allows changing behavior without redeployment. Enables A/B testing. `.env` is reserved for static secrets.
+**Rationale:** Cost-effective object storage with global CDN. Integrates well with Cloudflare Tunnel for backend. Signed URLs enable secure direct uploads.
 
 **Status:** Active  
 **Date:** 2026-08-12
 
 ---
 
-## D7: Media URLs Use Random IDs
+## D6: Presigned URL Upload Flow
 
-**Decision:** Media URLs follow pattern `cdn-city.rexio.pro/post/{random-id}.{ext}`. No sequential or guessable IDs.
+**Decision:** Large media uploads use presigned URL flow: frontend requests URL from backend, then uploads directly to R2, then confirms with backend.
 
-**Rationale:** Prevents enumeration attacks. Random IDs are generated with sufficient entropy (e.g., UUID v4 or 32-char hex).
+**Rationale:** Bypasses Vercel's 4.5MB function payload limit. Allows mobile camera photos (5-15MB) to upload successfully. Client-side compression reduces bandwidth.
+
+**Status:** Active  
+**Date:** 2026-08-13
+
+---
+
+## D7: DB-driven Configuration
+
+**Decision:** Business logic configuration (feature flags, rate limits, scoring weights) stored in database `settings` table, not hardcoded `.env` values.
+
+**Rationale:** Allows runtime changes without redeployment. Enables A/B testing and gradual rollouts.
 
 **Status:** Active  
 **Date:** 2026-08-12
 
 ---
 
-## D8: Single Agent at a Time
+## D8: Go Backend as Single API Gateway
 
-**Decision:** Only one AI coding agent works on this repository in a single session. No concurrent edits.
+**Decision:** All frontend requests go through Go backend. No direct Supabase from browser.
 
-**Rationale:** Prevents merge conflicts, ensures consistent code quality, allows each agent to read full context before working.
-
-**Status:** Active  
-**Date:** 2026-08-12
-
----
-
-## D9: Branching Model
-
-**Decision:** All work goes to `dev`. `main` is protected and only updated via manual PR review by Sijan.
-
-**Rationale:** Clean history, easy rollback, Sijan has final say on production code.
+**Rationale:** Security, consistency, and centralized business logic. The backend is the source of truth.
 
 **Status:** Active  
 **Date:** 2026-08-12
 
 ---
 
-## D10: Design Token System
-
-**Decision:** All colors, spacing, and typography come from CSS custom properties defined in `DESIGN.md`. No hardcoded values in components.
-
-**Rationale:** Consistency across frontend and admin apps. Easy theme changes. Single source of truth.
-
-**Status:** Active  
-**Date:** 2026-08-12
-
----
-
-*When adding new decisions, append a new section with D-number, decision, rationale, status, and date.*
+*Record all future decisions here with date, status, and rationale.*

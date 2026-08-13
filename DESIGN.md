@@ -48,79 +48,84 @@ Reference inspiration: Peermeld (layout structure — top bar, feed card actions
     --bg-secondary: #202C33;
     --bg-elevated: #17212B;
     --text: #E9EDEF;
-    --text-muted: #8696A0;
-    --accent: #8A6B7C;
-    --accent-contrast: #0B141A;
-    --border: #2A3942;
-    --error: #F15C6D;
-    --success: #4ADE80;
+    --text-muted: #8B98A5;
+    --accent: #7B5EA7;
+    --accent-contrast: #FFFFFF;
+    --border: #38444D;
+    --error: #F4212E;
+    --success: #00BA7C;
   }
 }
 ```
-
-- `--accent` (muted plum, `#6B4E5E` light / `#8A6B7C` dark) is the **only** accent color. Do not introduce a second competing accent (no default terracotta/orange, no generic SaaS blue) unless explicitly requested.
-- If using Tailwind in `admin/`, map these CSS variables into `tailwind.config` (`colors: { bg: 'var(--bg)', accent: 'var(--accent)', ... }`) rather than using Tailwind's default palette directly, so both apps stay token-consistent.
 
 ---
 
 ## 3. Typography
 
-- **Body / UI face:** a clean, neutral humanist sans (e.g. Inter or General Sans). Should feel invisible, not decorative — this is a utility-dense app (feed, DMs, forms), not a marketing landing page.
-- **Monospace face** (JetBrains Mono or IBM Plex Mono): used narrowly — for things like verification codes, technical/admin-panel data tables, timestamps in dense admin views. Not used for general body text.
-- **No heavy display serif.** This product does not need an editorial personality; legibility and speed of scanning matter more than a memorable type voice.
-- Font sizes fluid via `clamp()` where practical (e.g. `font-size: clamp(0.875rem, 2vw, 1rem)`) to reduce the number of hard breakpoint overrides needed.
+- **Font family:** System font stack (`-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`)
+- **Base size:** 14px on mobile, 16px on desktop
+- **Line height:** 1.5 for body, 1.2 for headings
 
 ---
 
-## 4. Layout Reference (from Peermeld, reinterpreted with our tokens)
+## 4. Layout
 
-**Top bar:** search input, a few status/utility icons on the right (kept minimal — RexiO City doesn't need Peermeld's specific gift/points/streak icons unless a future gamification feature is explicitly scoped), user avatar.
-
-**Feed card:**
-- Author row: avatar, display name, `@username`, timestamp (muted color, right-aligned or trailing).
-- Body: text content, optional media, optional link-preview card.
-- Action row: like, comment, repost, save/bookmark — icon + count, muted color, `--accent` on active/pressed state.
-- Hairline `--border` divider between cards, not heavy shadows.
-
-**Bottom tab bar (mobile):** Feed, (other primary sections as scoped), Messaging, Notifications/Alerts. Icons + labels, active tab in `--accent`.
-
-**Profile page:** cover image, avatar overlapping the cover (circular, bordered in `--bg`), display name, `@username`, bio, follow/following counts, action buttons (Follow / Message / Edit Profile depending on viewer), tabs for Posts / Replies / Media.
-
-**Compose:** a floating action button (mobile) opening a bottom sheet with tabs/sections for text, photo, video, voice attachment.
+- **Max width:** 600px for feed, full-width for profiles
+- **Padding:** 16px mobile, 24px desktop
+- **Gap:** 12px between cards
 
 ---
 
-## 5. Motion
+## 5. Components
 
-- Keep motion purposeful and restrained — this is a dense, frequently-used utility app, not a marketing site. Avoid decorative page-load animations.
-- Micro-interactions only where they clarify state: e.g. a like button's brief scale/pulse on tap, a subtle fade when a new DM arrives in an open thread.
-- Respect `prefers-reduced-motion` — disable non-essential motion when set.
+### Buttons
+- Primary: accent background, white text
+- Secondary: border, accent text
+- Danger: error color
 
----
+### Cards
+- Background: `--bg-elevated`
+- Border: `1px solid --border`
+- Radius: `--radius-md`
+- Shadow: subtle on elevation
 
-## 6. Accessibility Floor (non-negotiable, every screen)
-
-- Visible keyboard focus states on all interactive elements (use `--accent` for the focus ring, not the browser default only).
-- Color contrast: body text against `--bg` must meet WCAG AA at minimum in both themes.
-- All icon-only buttons (like, repost, bookmark, etc.) need an `aria-label`.
-- Forms (login, signup, compose) must have real `<label>`s, not placeholder-only inputs.
-
----
-
-## 7. Copy / Voice
-
-- Plain, active voice. "Save changes," not "Submit." A control's label stays the same word through the whole flow it triggers (a "Post" button produces a "Posted" confirmation, not "Success!").
-- Empty states are instructional, not cute: e.g. "No messages yet — start a conversation from someone's profile," not a joke or filler illustration caption.
-- Errors state what happened and what to do next, in the interface's voice — never "Oops!" or an apology tone.
+### Inputs
+- Background: `--bg-secondary`
+- Border: `1px solid --border`
+- Focus: `--accent` border
+- Radius: `--radius-sm`
 
 ---
 
-## 8. Admin App (`admin/`) Specific Notes
+## 6. Spacing Scale
 
-- Same token system as `frontend/` — this is one brand, not a visually distinct "internal tool" look.
-- Denser layouts are acceptable here (more data per screen, smaller touch targets are fine on desktop) but must still be fully usable on mobile per the PRD's responsiveness requirement.
-- Use the monospace face more liberally here (IDs, timestamps, raw data tables) than on the main user-facing app.
+Use the spacing tokens above. Never hardcode pixel values in components.
 
 ---
 
-*Any component that introduces a color, spacing, or font value not defined here should trigger a pause — add the token here first (and note the addition in `WORKLOGS.md`), then use it. Don't inline a one-off value "just this once."*
+## 7. Responsive Breakpoints
+
+```css
+/* Mobile first */
+@media (min-width: 640px) { /* sm */ }
+@media (min-width: 768px) { /* md */ }
+@media (min-width: 1024px) { /* lg */ }
+```
+
+---
+
+## 8. Dark Mode
+
+Automatically follows system preference. No user toggle in V1.
+
+---
+
+## 9. Accessibility
+
+- Minimum contrast ratio: 4.5:1 for text
+- Focus visible on all interactive elements
+- Semantic HTML (button, nav, main, article)
+
+---
+
+*This design system is binding. Deviations require explicit approval and must be documented.*

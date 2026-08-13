@@ -1,7 +1,7 @@
 # RexiO City — Product Requirements Document (V1)
 
 **Status:** Active Development  
-**Last Updated:** 2026-08-12  
+**Last Updated:** 2026-08-13  
 **Author:** SpritEX (Sijan)  
 **Version:** v1.1.0
 
@@ -30,7 +30,7 @@ rexio-city/
 ├── admin/                 # Vite + Tailwind — oppscity.rexio.pro
 ├── backend/
 │   ├── go/
-│   │   ├── cmd/api/       # Main platform backend (port 10800)
+│   │   ├── cmd/api/       # Main platform backend (port 10888)
 │   │   ├── cmd/admin/     # Admin backend (port 10900)
 │   │   ├── internal/      # Business logic
 │   │   └── migrations/    # SQL migrations
@@ -75,8 +75,8 @@ rexio-city/
 | Frontend (Next.js) | Dev preview | dev-city.rexio.pro |
 | Admin (Vite) | Production | oppscity.rexio.pro |
 | Admin (Vite) | Local dev | localhost:5189 |
-|| Backend (main) | Dev (Cloudflare Tunnel) | citydev.rexio.pro |
-||| Backend (main) | Production (future VPS - rightnow Railway) | city-connect.rexio.pro |
+| Backend (main) | Dev (Cloudflare Tunnel) | citydev.rexio.pro |
+| Backend (main) | Production | city-connect.rexio.pro |
 | Media/CDN | All | cdn-city.rexio.pro |
 
 ### Deployment Targets
@@ -248,8 +248,8 @@ All:        https://cdn-city.rexio.pro
 
 | Service | Environment | URL |
 |---|---|---|
-|| Main API | Dev | `https://citydev.rexio.pro` |
-|| Main API | Production | `https://city-connect.rexio.pro` |
+| Main API | Dev | `https://citydev.rexio.pro` |
+| Main API | Production | `https://city-connect.rexio.pro` |
 | Media CDN | All | `https://cdn-city.rexio.pro` |
 
 ### Response Format
@@ -349,7 +349,7 @@ settings (key, value, updated_at)
 
 ### Backend (Go)
 - Hosted on Hetzner VPS via Cloudflare Tunnel
-- Domain: `connect2city.spritexai.dpdns.org`
+- Domain: `city-connect.rexio.pro` (production), `citydev.rexio.pro` (dev)
 - Two separate services: main API + admin API
 
 ### Admin Panel (Vite)
