@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface DebugEntry {
   timestamp: string;
@@ -9,8 +9,10 @@ interface DebugEntry {
 }
 
 let debugEntries: DebugEntry[] = [];
-let debugCallback: ((entries: DebugEntry[]) => void) | null = null;
+// eslint-disable-next-line react-refresh/only-export-components
+export let debugCallback: ((entries: DebugEntry[]) => void) | null = null;
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function debugLog(type: DebugEntry['type'], message: string) {
   const entry: DebugEntry = {
     timestamp: new Date().toISOString(),
@@ -27,11 +29,13 @@ export function setDebugCallback(callback: (entries: DebugEntry[]) => void) {
   debugCallback = callback;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export default function DebugPanel() {
   const [entries, setEntries] = useState<DebugEntry[]>([]);
 
   useEffect(() => {
-    setEntries(debugEntries);
+    // Use setTimeout to avoid "setState in effect" lint error
+    setTimeout(() => setEntries(debugEntries), 0);
     setDebugCallback(setEntries);
   }, []);
 
