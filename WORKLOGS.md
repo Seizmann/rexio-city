@@ -226,3 +226,85 @@ sudo -u sijan DATABASE_URL="$(grep DATABASE_URL .env | cut -d= -f2-)" nohup ./ap
 
 ### Files modified:
 - `backend/go/cmd/api/main.go`
+### Notes for next agent:
+- Backend runs in Docker container named `docker-backend-1`
+- To restart: `docker restart docker-backend-1`
+- To rebuild: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
+- Dockerfile requires Go 1.25 (updated from 1.22)
+
+---
+
+## [2026-08-13 19:15, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User reported 502 Bad Gateway error on dev-city.rexio.pro
+- Docker container had crashed (exited with code 2)
+
+### Fix applied:
+- Restarted Docker container: `docker start docker-backend-1`
+- Verified backend is healthy: `curl https://citydev.rexio.pro/api/health` → 200 OK
+
+### Verification:
+```bash
+curl -s https://dev-city.rexio.pro/api/users/irin
+# Returns: {"data":{"username":"irin","followers":3,"following":1,...},"success":true}
+
+curl -s https://dev-city.rexio.pro/api/users/shuvo
+# Returns: {"data":{"username":"shuvo","followers":0,"following":1,...},"success":true}
+```
+
+### Status:
+- ✅ Backend running (Docker container restarted)
+- ✅ Profile endpoints working (public, no auth required)
+- ✅ Frontend running on port 3800
+- ✅ Tunnel working: dev-city.rexio.pro
+
+### Files modified:
+- None (just restarted container)
+
+---
+
+## [2026-08-13 19:30, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+### Picking up:
+- User reported profile still showing 0 followers/following
+- Backend was panicking when accessing unauthenticated users
+
+### Root cause identified:
+- `GET /api/users/:id/is-following` was calling `c.Locals("user_id").(uint)` but user_id was nil for unauthenticated requests
+- This caused a panic: `interface conversion: interface {} is nil, not uint`
+- The endpoint was moved to public routes but the code didn't handle unauthenticated users
+
+### Fix applied:
+1. **Follow handler panic fix** (`backend/go/internal/handlers/follow.go`):
+   - Added nil check for `c.Locals("user_id")` before type assertion
+   - Return `is_following: false` for unauthenticated users
+
+2. **Made more endpoints public** (`backend/go/cmd/api/main.go`):
+   - `GET /api/users/:id/followers` - now public
+   - `GET /api/users/:id/following` - now public
+
+3. **Rebuilt and restarted** Docker container
+
+### Verification:
+```bash
+curl -s https://dev-city.rexio.pro/api/users/irin
+# Returns: {"data":{"username":"irin","follower_count":3,"following_count":1,...},"success":true}
+
+curl -s https://dev-city.rexio.pro/api/users/shuvo
+# Returns: {"data":{"username":"shuvo","follower_count":0,"following_count":1,...},"success":true}
+```
+
+### Status:
+- ✅ Backend running (Docker container with fixed code)
+- ✅ Frontend running on port 3800 (dev-city.rexio.pro)
+- ✅ All profile endpoints working
+- ✅ All commits pushed to dev
+
+### Files modified:
+- `backend/go/internal/handlers/follow.go` - Added nil check for unauthenticated users
+- `backend/go/cmd/api/main.go` - Made followers/following endpoints public
+
+### Notes for next agent:
+- Backend runs in Docker container named `docker-backend-1`
+- To restart: `docker restart docker-backend-1`
+- To rebuild: `cd /home/sijan/SijansP/rexio-city && docker build -f docker/Dockerfile.backend -t docker-backend:latest .`
+- Dockerfile requires Go 1.25 (updated from 1.22)
