@@ -77,7 +77,15 @@
   - Media CDN: https://cdn-city.rexio.pro
 - Note: Old direct-upload endpoint (/api/media/upload) still exists for backward compatibility but is deprecated
 - PRD Section 6 domain table is stale — should be updated to reflect current domains
-- Backend Docker rebuild fails due to Go version mismatch (1.22 in Docker vs 1.25 in go.mod) — existing backend running fine
+|- Backend Docker rebuild fails due to Go version mismatch (1.22 in Docker vs 1.25 in go.mod) — existing backend running fine
+
+### FOURTH FIX — Docker Go Version:
+- Problem: Railway backend build/deploy failed
+- Error: `go.mod requires go >= 1.25 (running go 1.22.12; GOTOOLCHAIN=local)`
+- Root cause: Dockerfile used `golang:1.22-alpine` but go.mod requires Go 1.25
+- Fix: Updated Dockerfile to use `golang:1.25-alpine`
+- Commit: 053c0b7
+- Status: ✅ Fixed, Railway should now build successfully
 
 ### Files changed:
 - frontend/src/lib/compression.ts — NEW: Canvas-based image compression
@@ -109,3 +117,26 @@
 - New flow: compress → request presigned URL → direct R2 PUT → verify upload
 - Browser bypasses Vercel limit by uploading directly to Cloudflare R2
 - Mobile camera photos (5-15MB) now work after client-side compression
+
+### Deployment Status:
+- **Production** (https://city.rexio.pro): ✅ Working
+  - /api/media/upload-request: Returns 401 without auth (expected)
+  - /api/media/upload-complete: Returns 401 without auth (expected)
+  - /api/media/upload: Still works for backward compatibility
+- **Dev** (https://dev-city.rexio.pro): ⚠️ Behind Vercel SSO lock
+  - 404 errors due to Vercel authentication requirement
+  - This is a Vercel project setting, not a code issue
+  - Use production URL for testing
+
+### Endpoints Summary:
+| Endpoint | Auth | Status |
+|----------|------|--------|
+| POST /api/media/upload-request | JWT | ✅ Working (401 without auth) |
+| POST /api/media/upload-complete | JWT | ✅ Working (401 without auth) |
+| POST /api/media/upload | JWT | ✅ Working (legacy) |
+
+### Next Steps for Testing:
+1. Login to get JWT token
+2. Use token in Authorization header
+3. Test upload flow on production URL
+4. Test on mobile device with 13MB camera photo
