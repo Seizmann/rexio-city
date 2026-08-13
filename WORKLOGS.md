@@ -50,3 +50,8 @@
 ### Notes for next agent:
 - The cache is in-memory only (per-page refresh clears it). This is intentional for V1.
 - If backend latency becomes an issue, profile page also does concurrent fetches for user data, follow counts, and posts — consider batching these if needed.
+
+### Secondary bug fix (2026-08-13):
+- Fixed issue where cache stored empty data before user authentication
+- Added `clearCache()` calls on login, signup, logout, and logoutAll
+- This ensures fresh data is fetched after authentication state changes
