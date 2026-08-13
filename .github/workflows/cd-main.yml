@@ -1,0 +1,36 @@
+# GitHub Actions CD Workflow
+# Triggers Railway redeploy when main branch is updated
+#
+# This workflow runs when code is pushed to main (after a PR merge).
+# It sends a POST request to Railway's Deploy Webhook URL to trigger
+# a new deployment of the backend service.
+#
+# The webhook URL is stored as a GitHub Actions repository secret
+# named RAILWAY_DEPLOY_WEBHOOK_URL.
+#
+# Path filtering is enabled to only trigger when backend code changes.
+# This avoids unnecessary deploys when only frontend or docs change.
+
+name: CD - Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/go/**'
+      - 'backend/go/cmd/api/**'
+      - 'backend/go/cmd/admin/**'
+      - 'backend/go/internal/**'
+      - 'backend/go/migrations/**'
+
+jobs:
+  deploy-backend:
+    name: Trigger Railway Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Railway
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"deploy": true}' \
+            "${{ secrets.RAILWAY_DEPLOY_WEBHOOK_URL }}"

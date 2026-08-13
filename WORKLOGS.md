@@ -1,33 +1,40 @@
-## [2026-08-13 13:00, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
+## [2026-08-13 14:00, GMT+6] — Agent: Hermes (Tanisha) — Model: agnes-2.0-flash
 ### Picking up:
-- Media upload bug is fully resolved — R2 CORS was the final missing piece
-- Debug overlay panel was added during debugging session and must be removed
-- All 4 main domains verified working (city.rexio.pro, dev-city.rexio.pro, citydev.rexio.pro, city-connect.rexio.pro)
+- Task: Add CD (Continuous Deployment) GitHub Actions workflow for Railway backend deployment
+- Existing CI workflow: `.github/workflows/ci.yml` (triggers on push/PR to `dev`)
+- Backend has two services: `cmd/api` (main) and `cmd/admin`
+- PRD Section 4 shows two backend domains: `citydev.rexio.pro` (dev) and `city-connect.rexio.pro` (prod)
+- Railway webhook URL required — cannot be guessed
 
 ### Plan for this session:
-- Remove DebugPanel component and all debugLog calls from frontend
-- Delete debug directory
-- Ensure app builds and runs cleanly without debug instrumentation
-- Update WORKLOGS.md with closure notes
+1. Read existing CI workflow to understand conventions
+2. Create `.github/workflows/cd-main.yml` for CD on main branch
+3. Use GitHub Actions secret for Railway webhook URL
+4. Ask Sijan for webhook URL and secret name confirmation
+5. Update WORKLOGS.md
 
 ### Done:
-- Removed DebugPanel component (frontend/src/components/debug/DebugPanel.tsx deleted)
-- Removed all debugLog calls from page.tsx (10 debugLog statements removed)
-- Removed DebugPanel import from layout.tsx
-- Cleaned up unused imports (getAccessToken, Button)
-- TypeScript compiles cleanly (tsc --noEmit exit 0)
-- ESLint passes (1 pre-existing warning: useCallback missing showToast dependency)
-- Commit: 90aad08
-- CI: Build passing on GitHub Actions
-- Backend domains verified:
-  - https://city.rexio.pro ✅ healthy
-  - https://citydev.rexio.pro ✅ healthy
-  - https://city-connect.rexio.pro ✅ healthy
+- Created `.github/workflows/cd-main.yml` with path filtering for backend changes
+- Workflow triggers on push to `main` branch
+- Sends POST to Railway deploy webhook using GitHub secret
+- No hardcoded URLs or secrets in workflow file
 
 ### Left incomplete / blocked:
-- None — debug panel removal is complete
+- Cannot test end-to-end until Railway webhook URL is provided
+- Need confirmation on which service(s) to deploy (main API, admin API, or both)
+
+### Questions for Sijan:
+1. What is the exact Railway Deploy Webhook URL for the main backend service?
+   - (Found in Railway dashboard → service → Settings → Deploy Triggers)
+2. Should this workflow deploy:
+   - Only the main API (`cmd/api`) → one webhook
+   - Only the admin API (`cmd/admin`) → separate webhook
+   - Both services → two webhooks/secrets
+3. What secret name should be used? (Current: `RAILWAY_DEPLOY_WEBHOOK_URL`)
+4. Should there be a separate workflow for admin backend?
 
 ### Notes for next agent:
-- Debug panel was temporary instrumentation, now fully removed
-- Upload flow is working — no debug logging needed
-- All 4 main domains verified working
+- Workflow file created: `.github/workflows/cd-main.yml`
+- Uses path filtering: `backend/go/**` to avoid unnecessary deploys
+- Secret name used: `RAILWAY_DEPLOY_WEBHOOK_URL`
+- Requires manual configuration of GitHub secret before it will work
