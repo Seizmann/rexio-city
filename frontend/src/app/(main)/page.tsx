@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 import { api, getAccessToken } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
-import DebugPanel, { debugLog } from '@/components/debug/DebugPanel';
+import { debugLog } from '@/components/debug/DebugPanel';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
