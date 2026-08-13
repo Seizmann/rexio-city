@@ -73,39 +73,28 @@ func main() {
 	userHandler := handlers.NewUserHandler()
 	followHandler := handlers.NewFollowHandler()
 
-	// ── Public user/profile endpoints (no auth required) ─────────
-	// These must be registered BEFORE protected routes so they take precedence.
-	// If registered after, the protected middleware catches them first.
-	app.Get("/api/users/:username", userHandler.GetUser)
-	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
-	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
-	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
-	app.Get("/api/users/:id/following", followHandler.GetFollowing)
-
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
 	protected.Use(middleware.CSRF(cfg.CSRFSecret))
 
-	// User routes (me must be registered BEFORE wildcard :username)
+	// Exact route /api/users/me must be registered BEFORE wildcard /api/users/:username
 	protected.Get("/users/me", userHandler.GetCurrentUser)
 	protected.Patch("/users/me", userHandler.UpdateUser)
 	protected.Get("/search", userHandler.SearchUsers)
+
+	// ── Public user/profile endpoints (no auth required) ─────────
+	app.Get("/api/users/:username", userHandler.GetUser)
+	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
+	app.Get("/api/users/:id/following", followHandler.GetFollowing)
 
 	// Session management (auth required)
 	protected.Get("/auth/sessions", authHandler.ListSessions)
 	protected.Post("/auth/sessions/:id/revoke", authHandler.RevokeSession)
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Post("/auth/logout-all", authHandler.LogoutAll)
-
-	// ── Public user/profile endpoints (no auth required) ─────────
-	// These must be registered BEFORE protected routes so they take precedence.
-	// If registered after, the protected middleware catches them first.
-	app.Get("/api/users/:username", userHandler.GetUser)
-	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
-	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
-	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
-	app.Get("/api/users/:id/following", followHandler.GetFollowing)
 
 	// Post routes
 	protected.Post("/posts", postHandler.CreatePost)
