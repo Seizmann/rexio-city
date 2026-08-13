@@ -61,6 +61,8 @@ func main() {
 	)
 	media := app.Group("/api/media")
 	media.Post("/upload", mediaHandler.UploadMedia)
+	media.Post("/upload-request", mediaHandler.GeneratePresignedURL)
+	media.Post("/upload-complete", mediaHandler.CompleteUpload)
 
 	// ── Public post endpoints (no auth required) ─────────────────
 	postHandler := handlers.NewPostHandler()

@@ -81,6 +81,31 @@ let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
 /**
+ * Safely parse JSON response. Handles non-JSON responses (e.g., 413, 431, 500)
+ * that Vercel/Cloudflare may return as plain text instead of JSON.
+ */
+async function parseJSONResponse<T>(response: Response): Promise<APIResponse<T>> {
+  const contentType = response.headers.get('content-type') || '';
+
+  // If response is not JSON, read as text and throw a user-friendly error
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    const errorMessage = text.includes('Entity')
+      ? 'File too large. Please compress your photo and try again.'
+      : text.includes('Header')
+        ? 'Request headers too large. Please refresh the page and try again.'
+        : text || `Server error (${response.status})`;
+    throw new Error(errorMessage);
+  }
+
+  try {
+    return await response.json() as APIResponse<T>;
+  } catch {
+    throw new Error(`Invalid JSON response from server (${response.status})`);
+  }
+}
+
+/**
  * Low-level fetch wrapper. Attaches auth Bearer header, attaches CSRF token
  * on mutating requests, parses JSON response, and attempts a single silent
  * token refresh on 401 before giving up.
@@ -143,14 +168,14 @@ async function apiFetch<T>(
         headers: retryHeaders,
         credentials: 'include',
       });
-      return retryResponse.json() as Promise<APIResponse<T>>;
+      return parseJSONResponse<T>(retryResponse);
     }
     // Refresh failed — clear in-memory token and cached user
     setAccessToken(null);
     clearStoredUser();
   }
 
-  return response.json() as Promise<APIResponse<T>>;
+  return parseJSONResponse<T>(response);
 }
 
 /**
@@ -269,6 +294,7 @@ export const api = {
 
     // Log the request for debugging
     console.log('[api.upload] Starting upload:', path, 'hasToken:', !!token, 'hasCSRF:', !!csrf);
+    console.log('[api.upload] Headers:', JSON.stringify(headers));
 
     let response = await fetch(path, {
       method: 'POST',
@@ -277,11 +303,12 @@ export const api = {
       credentials: 'include',
     });
 
-    console.log('[api.upload] Response status:', response.status);
+    console.log('[api.upload] Response status:', response.status, 'content-type:', response.headers.get('content-type'));
 
     // Check for 431 (header too large) — Vercel returns plain text, not JSON
     if (response.status === 431) {
       const text = await response.text();
+      console.error('[api.upload] 431 Response:', text.slice(0, 200));
       throw new Error(text.includes('Request Header') ? 'Request headers too large. Please clear cookies and try again.' : text);
     }
 
@@ -314,10 +341,6 @@ export const api = {
       }
     }
 
-    const data = await response.json() as APIResponse<T>;
-    if (!data.success && data.error) {
-      console.error('[api.upload] Upload error:', data.error);
-    }
-    return data;
+    return parseJSONResponse<T>(response);
   },
 };

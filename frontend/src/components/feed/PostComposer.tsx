@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import styles from './PostComposer.module.css';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/ui/Button';
+import { compressImage } from '@/lib/compression';
 
 interface PostComposerProps {
   onPostSubmit: (payload: {

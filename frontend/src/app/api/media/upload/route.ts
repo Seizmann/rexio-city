@@ -38,13 +38,21 @@ export async function POST(request: NextRequest) {
     const cookie = request.headers.get('Cookie');
     if (cookie) forwardHeaders.set('Cookie', cookie);
 
-    // Read binary body as ArrayBuffer to avoid NextRequest stream locking issues in Node.js
-    const bodyBuffer = await request.arrayBuffer();
-
+    // CRITICAL: Stream the request body directly to the backend instead of
+    // buffering it into memory with request.arrayBuffer().
+    //
+    // Vercel's Hobby plan has a 4MB function payload limit. When we call
+    // request.arrayBuffer(), Vercel buffers the entire request in memory
+    // and rejects payloads >4MB with 413 FUNCTION_PAYLOAD_TOO_LARGE.
+    //
+    // By streaming request.body directly, we bypass this limit — the data
+    // flows through Node.js streams without being fully buffered by Vercel.
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: forwardHeaders,
-      body: bodyBuffer,
+      body: request.body,
+      // @ts-expect-error — duplex is a Node.js extension not in TypeScript's DOM lib
+      duplex: 'half' as const,
     });
 
     const responseHeaders = new Headers();
@@ -64,12 +72,26 @@ export async function POST(request: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
+    // Handle body size limit errors from Next.js
+    const message = error instanceof Error ? error.message : 'Upload failed';
+    if (message.includes('body') || message.includes('size') || message.includes('limit')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'FILE_TOO_LARGE',
+            message: 'File is too large — max 30MB allowed. Please compress your photo and try again.',
+          },
+        },
+        { status: 413 },
+      );
+    }
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'UPLOAD_PROXY_ERROR',
-          message: error instanceof Error ? error.message : 'Upload proxy failed',
+          message: message,
         },
       },
       { status: 502 },

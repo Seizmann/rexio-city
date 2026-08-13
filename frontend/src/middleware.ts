@@ -32,10 +32,15 @@ export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('User-Agent') || 'unknown';
   // Count all header bytes manually
   let headerSize = 0;
+  const headerPairs: string[] = [];
   request.headers.forEach((value, key) => {
     headerSize += key.length + value.length;
+    headerPairs.push(`${key}: ${value.slice(0, 50)}...`);
   });
   console.log(`[middleware] ${pathname} | UA: ${userAgent.slice(0, 50)} | Headers: ${headerSize}B | Cookie: ${cookieHeader ? cookieHeader.length : 0}B`);
+  if (headerSize > 5000) {
+    console.log(`[middleware] Headers for ${pathname}:`, headerPairs.join(' | '));
+  }
 
   // Block requests with excessive header sizes (Vercel limit is ~8KB)
   if (headerSize > 8000) {

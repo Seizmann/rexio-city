@@ -41,6 +41,8 @@ export const API = {
 
   // Media
   MEDIA_UPLOAD: '/api/media/upload',
+  MEDIA_UPLOAD_REQUEST: '/api/media/upload-request',
+  MEDIA_UPLOAD_COMPLETE: '/api/media/upload-complete',
 
   // Notifications
   NOTIFICATIONS: '/api/notifications',
