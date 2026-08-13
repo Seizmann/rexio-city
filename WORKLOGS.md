@@ -118,17 +118,19 @@
 - Browser bypasses Vercel limit by uploading directly to Cloudflare R2
 - Mobile camera photos (5-15MB) now work after client-side compression
 
-### Deployment Status:
+### Deployment Status (UPDATED):
 - **Production Frontend** (https://city.rexio.pro): ✅ Working
-  - /api/media/upload-request: Returns 400 (backend not deployed yet)
-  - /api/media/upload-complete: Returns 400 (backend not deployed yet)
+  - Backend URL fixed: now uses https://citydev.rexio.pro
+  - /api/media/upload-request: Working (proxies to backend)
+  - /api/media/upload-complete: Working (proxies to backend)
   - /api/media/upload: Still works (legacy)
+- **Backend Production** (https://citydev.rexio.pro): ✅ Working
+  - All new endpoints deployed and functional
+  - Presigned URL generation: ✅ Working
+  - Upload verification: ✅ Working
 - **Local Backend** (http://localhost:10888): ✅ Working
-  - All new endpoints work correctly
+  - All endpoints functional
   - Docker rebuild successful with Go 1.25
-- **Railway Production Backend** (https://citydev.rexio.pro): ❌ Not deployed yet
-  - Needs rebuild to include new endpoints
-  - Current version doesn't have upload-request/upload-complete routes
 
 ### Endpoints Summary:
 | Endpoint | Auth | Status |
