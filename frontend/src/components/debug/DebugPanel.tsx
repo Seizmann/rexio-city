@@ -32,11 +32,21 @@ export function setDebugCallback(callback: (entries: DebugEntry[]) => void) {
 // eslint-disable-next-line react-refresh/only-export-components
 export default function DebugPanel() {
   const [entries, setEntries] = useState<DebugEntry[]>([]);
+  const [show, setShow] = useState(true);
 
   useEffect(() => {
-    // Use setTimeout to avoid "setState in effect" lint error
-    setTimeout(() => setEntries(debugEntries), 0);
+    // Force initial load
+    setTimeout(() => setEntries([...debugEntries]), 0);
     setDebugCallback(setEntries);
+
+    // Poll every 500ms to ensure updates
+    const interval = setInterval(() => {
+      setEntries([...debugEntries]);
+    }, 500);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
   // Always show the panel (even if empty) so user can see it
@@ -58,14 +68,22 @@ export default function DebugPanel() {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontWeight: 'bold' }}>
         <span>🐛 DEBUG ({entries.length})</span>
-        <button
-          onClick={() => { debugEntries = []; setEntries([]); }}
-          style={{ background: 'red', color: 'white', border: 'none', padding: '2px 8px', cursor: 'pointer', borderRadius: 4 }}
-        >
-          ✕
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            onClick={() => setShow(!show)}
+            style={{ background: show ? '#333' : '#0f0', color: show ? '#fff' : '#000', border: 'none', padding: '2px 6px', cursor: 'pointer', borderRadius: 4, fontSize: 10 }}
+          >
+            {show ? 'Hide' : 'Show'}
+          </button>
+          <button
+            onClick={() => { debugEntries = []; setEntries([]); }}
+            style={{ background: 'red', color: 'white', border: 'none', padding: '2px 6px', cursor: 'pointer', borderRadius: 4, fontSize: 10 }}
+          >
+            ✕
+          </button>
+        </div>
       </div>
-      {entries.length === 0 ? (
+      {show && (entries.length === 0 ? (
         <div style={{ color: '#888', padding: '4px 0' }}>No debug events yet...</div>
       ) : (
         entries.map((entry, i) => (
@@ -78,7 +96,7 @@ export default function DebugPanel() {
             {entry.timestamp.slice(11, 23)} [{entry.type.toUpperCase()}] {entry.message}
           </div>
         ))
-      )}
+      ))}
     </div>
   );
 }
