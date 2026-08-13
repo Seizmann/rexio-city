@@ -45,3 +45,11 @@
 - Small image upload: ✅ works
 - Health check: ✅ healthy
 - CI: Backend tests passing, frontend building successfully
+
+### SECOND FIX — Vercel Function Payload Limit:
+- Problem: Vercel Hobby plan has 4MB function payload limit
+- Error: `413 FUNCTION_PAYLOAD_TOO_LARGE` from Vercel
+- Root cause: `request.arrayBuffer()` buffers entire request in memory → Vercel rejects >4MB
+- Fix: Stream `request.body` directly to backend instead of buffering
+- Added `duplex: 'half'` for Node.js stream support
+- Commit: 55c06bd
