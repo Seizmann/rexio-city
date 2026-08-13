@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 import { api } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
+import DebugPanel, { debugLog } from '@/components/debug/DebugPanel';
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -74,6 +75,9 @@ export default function HomePage() {
       pendingKey: string;
     }) => {
       const { content, files, pendingKey } = payload;
+
+      debugLog('upload', `Starting post: ${files.length} file(s), content: ${content.slice(0, 30)}...`);
+      debugLog('auth', `User: ${user?.username}, Token: ${!!api.getAccessToken()}`);
 
       const localPreviews = files.map(({ file, type }) => ({
         previewUrl: URL.createObjectURL(file),
@@ -162,6 +166,7 @@ export default function HomePage() {
         );
       } catch (err) {
         console.error('Post creation failed:', err);
+        debugLog('error', `Post failed: ${err instanceof Error ? err.message : String(err)}`);
         localPreviews.forEach((p) => URL.revokeObjectURL(p.previewUrl));
         updateStatus('error');
         // Show user-facing error message
