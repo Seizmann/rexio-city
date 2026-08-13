@@ -69,20 +69,18 @@ func main() {
 	app.Get("/api/posts/:id", postHandler.GetPost)
 	app.Get("/api/posts/:id/comments", postHandler.GetPostComments)
 
-	// ── Public user/profile endpoints (no auth required) ─────────
-	// These must be public so anyone can view profiles without logging in.
 	userHandler := handlers.NewUserHandler()
-	app.Get("/api/users/:username", userHandler.GetUser)
 	followHandler := handlers.NewFollowHandler()
-	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
-	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
-	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
-	app.Get("/api/users/:id/following", followHandler.GetFollowing)
 
 	// ── Protected routes (JWT auth + CSRF protection) ─────────────
 	protected := app.Group("/api")
 	protected.Use(middleware.Auth(cfg.JWTSecret))
 	protected.Use(middleware.CSRF(cfg.CSRFSecret))
+
+	// User routes (me must be registered BEFORE wildcard :username)
+	protected.Get("/users/me", userHandler.GetCurrentUser)
+	protected.Patch("/users/me", userHandler.UpdateUser)
+	protected.Get("/search", userHandler.SearchUsers)
 
 	// Session management (auth required)
 	protected.Get("/auth/sessions", authHandler.ListSessions)
@@ -90,11 +88,13 @@ func main() {
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Post("/auth/logout-all", authHandler.LogoutAll)
 
-	// User routes (auth required for modifications, but GET /users/:username is public)
-	// Note: GetUser is already registered above as a public route.
-	protected.Get("/users/me", userHandler.GetCurrentUser)
-	protected.Patch("/users/me", userHandler.UpdateUser)
-	protected.Get("/search", userHandler.SearchUsers)
+	// ── Public user/profile endpoints (no auth required) ─────────
+	// These must be public so anyone can view profiles without logging in.
+	app.Get("/api/users/:username", userHandler.GetUser)
+	app.Get("/api/users/:id/follow-counts", followHandler.GetFollowCounts)
+	app.Get("/api/users/:id/is-following", followHandler.IsFollowing)
+	app.Get("/api/users/:id/followers", followHandler.GetFollowers)
+	app.Get("/api/users/:id/following", followHandler.GetFollowing)
 
 	// Post routes
 	protected.Post("/posts", postHandler.CreatePost)
