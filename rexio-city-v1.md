@@ -76,7 +76,7 @@ rexio-city/
 | Admin (Vite) | Production | oppscity.rexio.pro |
 | Admin (Vite) | Local dev | localhost:5189 |
 || Backend (main) | Dev (Cloudflare Tunnel) | citydev.rexio.pro |
-||| Backend (main) | Production (future VPS) | connect2city.spritexai.dpdns.org |
+||| Backend (main) | Production (future VPS - rightnow Railway) | city-connect.rexio.pro |
 | Media/CDN | All | cdn-city.rexio.pro |
 
 ### Deployment Targets
