@@ -398,3 +398,46 @@ curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rex
 - `backend/go/internal/handlers/auth.go` - Fix refresh cookie path
 
 ---
+
+## [2026-08-13 21:03, GMT+6] — Agent: Antigravity — Model: Claude Sonnet 4.6 (Thinking)
+### Picking up:
+- User reported: page refresh on dev-city.rexio.pro shows login screen again (session lost)
+- Last session fixed cookie path (AGENTS.md says it was fixed), but the bug persisted
+
+### Root cause identified (2 bugs):
+
+**Bug 1 (Critical) — middleware.ts Set-Cookie forwarding broken:**
+- `response.headers.forEach()` in Node.js fetch merges ALL `Set-Cookie` headers into ONE
+  comma-joined string — this silently corrupts multi-cookie responses
+- Backend sends 2 cookies on login/refresh: `rexio_refresh` (httpOnly) + `rexio_csrf`
+- With the broken forEach, browser received ONE malformed merged cookie string → neither
+  cookie was stored correctly → on next refresh, no cookie → 401 → logged out
+- Fix: replaced `headers.forEach` with `headers.getSetCookie()` (returns proper `string[]`)
+- Also strip `Domain=` attribute from forwarded cookies so browser binds them to the
+  frontend origin (dev-city.rexio.pro), not the backend's domain
+
+**Bug 2 — .env misconfiguration:**
+- `COOKIE_DOMAIN=` (empty) — cookie domain was implicitly set to backend host
+- `COOKIE_SECURE=false` — cookies were not marked Secure despite HTTPS
+- `FRONTEND_URL=http://localhost:3000` — wrong, should be actual dev preview URL
+- Fixed: `COOKIE_DOMAIN=rexio.pro`, `COOKIE_SECURE=true`, `FRONTEND_URL=https://dev-city.rexio.pro`
+
+### Done:
+- ✅ Fixed `frontend/src/middleware.ts` — getSetCookie() + Domain stripping
+- ✅ Fixed `.env` — COOKIE_DOMAIN, COOKIE_SECURE, FRONTEND_URL (NOT committed — .env is gitignored)
+- ✅ Rebuilt backend Docker container with new env vars
+- ✅ Frontend rebuilt and restarted on port 3800
+- ✅ Verified: login returns 2 separate Set-Cookie headers correctly
+- ✅ Committed middleware fix: `aa86f80`
+
+### Left incomplete:
+- Push `aa86f80` to dev (awaiting user approval per AGENTS.md D10)
+- Manual browser test needed: login → refresh page → should stay logged in
+
+### Notes for next agent:
+- The `.env` fix is NOT in git (gitignored by design). If backend is redeployed from scratch,
+  set: `COOKIE_DOMAIN=rexio.pro`, `COOKIE_SECURE=true`, `FRONTEND_URL=https://dev-city.rexio.pro`
+- Backend container: `docker-backend-1` (restarted with correct env)
+- Frontend: running on port 3800 via `npm run start:preview`
+- The `getSetCookie()` method is available in Node.js 18+ fetch — this is the correct approach
+
