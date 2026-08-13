@@ -9,7 +9,7 @@ import PostCard from '@/components/feed/PostCard';
 import { PostCardSkeleton } from '@/components/ui/Skeleton';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 import { API } from '@/lib/constants';
 import type { Post } from '@/lib/types';
 import DebugPanel, { debugLog } from '@/components/debug/DebugPanel';
@@ -77,7 +77,7 @@ export default function HomePage() {
       const { content, files, pendingKey } = payload;
 
       debugLog('upload', `Starting post: ${files.length} file(s), content: ${content.slice(0, 30)}...`);
-      debugLog('auth', `User: ${user?.username}, Token: ${!!api.getAccessToken()}`);
+      debugLog('auth', `User: ${user?.username}, Token: ${!!getAccessToken()}`);
 
       const localPreviews = files.map(({ file, type }) => ({
         previewUrl: URL.createObjectURL(file),
