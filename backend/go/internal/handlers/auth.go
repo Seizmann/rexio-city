@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -275,22 +276,18 @@ func (h *AuthHandler) Health(c *fiber.Ctx) error {
 /* ── Cookie Helpers ─────────────────────────────────────────────── */
 
 // setRefreshCookie sets the httpOnly refresh token cookie.
-// SameSite=Strict prevents CSRF from sending this cookie cross-origin.
-// Path="/" ensures the cookie is sent to all endpoints (needed for token refresh).
 func setRefreshCookie(c *fiber.Ctx, rawToken string, cfg *config.Config) {
-	// Evict the stale /api/auth path cookie before setting the new one at path=/.
-	// See clearLegacyRefreshCookie for context.
-	clearLegacyRefreshCookie(c, cfg)
 	c.Cookie(&fiber.Cookie{
 		Name:     refreshCookieName,
 		Value:    rawToken,
-		Path:     "/", // Send to ALL endpoints (needed for token refresh)
+		Path:     "/",
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Now().Add(cfg.RefreshExpiry),
 		Secure:   cfg.CookieSecure,
-		HTTPOnly: true, // JS cannot read this
+		HTTPOnly: true,
 		SameSite: "Strict",
 	})
+	clearLegacyRefreshCookie(c, cfg)
 }
 
 // clearRefreshCookie deletes the refresh token cookie by expiring it.
@@ -298,39 +295,28 @@ func clearRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
 	c.Cookie(&fiber.Cookie{
 		Name:     refreshCookieName,
 		Value:    "",
-		Path:     "/", // Match the path set in setRefreshCookie
+		Path:     "/",
 		Domain:   cfg.CookieDomain,
 		Expires:  time.Unix(0, 0),
 		Secure:   cfg.CookieSecure,
 		HTTPOnly: true,
 		SameSite: "Strict",
 	})
-	// Also evict the legacy /api/auth path cookie on logout.
 	clearLegacyRefreshCookie(c, cfg)
 }
 
-// clearLegacyRefreshCookie expires the old rexio_refresh cookie that was
-// incorrectly set at path=/api/auth by an earlier version of this handler.
-//
-// The original cookie path bug meant browsers logged in before 2026-08-13 have
-// TWO rexio_refresh cookies: one at path=/ (correct) and one at path=/api/auth
-// (stale, with an expired/wrong token). Go Fiber's c.Cookies() picks one of them
-// — if it picks the stale one the refresh call returns 401 and the user is
-// logged out on every page reload.
-//
-// Sending Set-Cookie with path=/api/auth and Expires=epoch forces every browser
-// to delete the stale cookie on their next login or refresh.
-// This helper can be removed once all active sessions have cycled through
-// (safe to delete after a few weeks in production).
+// clearLegacyRefreshCookie expires the old rexio_refresh cookie set at path=/api/auth.
 func clearLegacyRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
-	c.Cookie(&fiber.Cookie{
-		Name:     refreshCookieName,
-		Value:    "",
-		Path:     "/api/auth", // The old, wrong path — must match exactly to evict
-		Domain:   cfg.CookieDomain,
-		Expires:  time.Unix(0, 0),
-		Secure:   cfg.CookieSecure,
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
+	domainAttr := ""
+	if cfg.CookieDomain != "" {
+		domainAttr = fmt.Sprintf("; Domain=%s", cfg.CookieDomain)
+	}
+	secureAttr := ""
+	if cfg.CookieSecure {
+		secureAttr = "; Secure"
+	}
+	// Manually append the Set-Cookie header so Fiber doesn't overwrite the primary cookie
+	cookieHeader := fmt.Sprintf("%s=; Path=/api/auth%s; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly%s; SameSite=Strict",
+		refreshCookieName, domainAttr, secureAttr)
+	c.Append("Set-Cookie", cookieHeader)
 }

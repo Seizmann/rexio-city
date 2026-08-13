@@ -441,3 +441,14 @@ curl -X POST https://dev-city.rexio.pro/api/auth/login -d '{"email":"test123@rex
 - Frontend: running on port 3800 via `npm run start:preview`
 - The `getSetCookie()` method is available in Node.js 18+ fetch — this is the correct approach
 
+
+## [2026-08-13 21:18, GMT+6] — Agent: Antigravity — Model: Gemini 3.6 Flash
+### Done:
+- ✅ Implemented automatic eviction of legacy `rexio_refresh` cookie set at `path=/api/auth` in `backend/go/internal/handlers/auth.go`.
+- ✅ Rebuilt and restarted backend Docker container `docker-backend-1`.
+- ✅ Verified backend sends expired Set-Cookie header for `/api/auth` path.
+- ✅ Committed fix: `eb9810b`.
+
+### Left incomplete:
+- Push commits to `dev` (waiting for user confirmation per AGENTS.md D10).
+
