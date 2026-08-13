@@ -61,3 +61,44 @@
 - Frontend deployed to https://city.rexio.pro
 - Backend: no rebuild needed (logic unchanged)
 - Upload now supports files up to 30MB (PRD requirement)
+
+### THIRD FIX — Presigned URL Upload Flow:
+- Problem: Even streaming, Vercel has 4.5MB hard limit on function payload
+- Root cause: Mobile camera photos are 5-15MB, exceeding Vercel limit
+- Solution: Presigned URL direct-to-R2 upload with client-side compression
+- Flow: Frontend → metadata request → presigned URL → direct R2 PUT → backend verification
+- Client-side compression: Canvas API compresses images >2MB to ~80% JPEG quality
+- New endpoints: /api/media/upload-request, /api/media/upload-complete
+- Backend endpoints: /api/media/upload-request, /api/media/upload-complete (Go)
+- Domains (from .env):
+  - Frontend prod: https://city.rexio.pro
+  - Frontend dev: https://dev-city.rexio.pro
+  - Backend prod: https://citydev.rexio.pro
+  - Media CDN: https://cdn-city.rexio.pro
+- Note: Old direct-upload endpoint (/api/media/upload) still exists for backward compatibility but is deprecated
+- PRD Section 6 domain table is stale — should be updated to reflect current domains
+- Backend Docker rebuild fails due to Go version mismatch (1.22 in Docker vs 1.25 in go.mod) — existing backend running fine
+
+### Files changed:
+- frontend/src/lib/compression.ts — NEW: Canvas-based image compression
+- frontend/src/app/api/media/upload-request/route.ts — NEW: Proxy to Go backend
+- frontend/src/app/api/media/upload-complete/route.ts — NEW: Proxy to Go backend
+- frontend/src/app/(main)/page.tsx — Updated upload flow
+- frontend/src/lib/constants.ts — Added new API endpoints
+- backend/go/internal/services/media.go — Added GeneratePresignedURL, VerifyUpload, BuildMediaURL
+- backend/go/internal/handlers/media.go — Added GeneratePresignedURL, CompleteUpload handlers
+- backend/go/cmd/api/main.go — Registered new routes
+- backend/go/internal/services/media_test.go — NEW: Tests for new methods
+- frontend/package.json — Added browser-image-compression (actually removed, using Canvas API instead)
+
+### Test results:
+- All Go tests pass ✅
+- TypeScript compiles ✅
+- ESLint passes (only pre-existing warnings) ✅
+- Frontend deploys to Vercel ✅
+
+### Status:
+- Backend: Running on VPS (no rebuild needed, logic works)
+- Frontend: Deployed to https://city.rexio.pro
+- Upload flow: Now uses presigned URLs for direct R2 upload
+- Compression: Client-side Canvas API, no external deps
