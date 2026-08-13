@@ -110,7 +110,7 @@ async function apiFetch<T>(
     }
   }
 
-  const response = await fetch(path, {\
+  const response = await fetch(path, {
     ...options,
     headers,
     // Credentials=include ensures the httpOnly refresh cookie and CSRF cookie
