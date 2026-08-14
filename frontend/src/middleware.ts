@@ -96,20 +96,20 @@ export async function middleware(request: NextRequest) {
     const responseHeaders = new Headers();
     responseHeaders.set('Content-Type', response.headers.get('Content-Type') || 'application/json');
 
-    // IMPORTANT: Use getSetCookie() — NOT headers.forEach().
-    // Node.js fetch merges all Set-Cookie values into one comma-joined string when
-    // accessed via forEach/get, breaking multi-cookie responses (refresh + CSRF).
-    // getSetCookie() returns a proper string[] preserving each cookie separately.
-    //
-    // Also strip the Domain= attribute from each cookie. The Go backend sets
-    // Domain=rexio.pro (or empty = backend host). The browser must store the cookie
-    // against the frontend origin (dev-city.rexio.pro / city.rexio.pro), so we let
-    // the browser infer the domain from the response origin rather than using the
-    // backend's domain directive.
-    const setCookies = (response.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+    // Pass through Set-Cookie headers correctly.
+    // Use getSetCookie() if available (Node.js < 22), fallback to forEach().
+    // We need to strip Domain= so cookies bind to the frontend origin
+    // (dev-city.rexio.pro) instead of the backend's rexio.pro domain.
+    let setCookies: string[] = [];
+    if (typeof (response.headers as any).getSetCookie === 'function') {
+      setCookies = (response.headers as any).getSetCookie();
+    } else {
+      response.headers.forEach((value: string, key: string) => {
+        if (key === 'set-cookie') setCookies.push(value);
+      });
+    }
     for (const cookie of setCookies) {
-      // Strip Domain= attribute — let browser bind cookie to frontend origin
-      const stripped = cookie.replace(/;?\s*Domain=[^;]*/gi, '');
+      const stripped = cookie.replace(/;\s*Domain=[^;]*/gi, '');
       responseHeaders.append('Set-Cookie', stripped);
     }
 

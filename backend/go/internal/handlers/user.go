@@ -20,6 +20,9 @@ func NewUserHandler() *UserHandler {
 // GetUser handles GET /api/users/:username
 func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	username := c.Params("username")
+	if username == "me" {
+		return h.GetCurrentUser(c)
+	}
 	var currentUserID uint
 	if val := c.Locals("user_id"); val != nil {
 		if id, ok := val.(uint); ok {

@@ -285,7 +285,7 @@ func setRefreshCookie(c *fiber.Ctx, rawToken string, cfg *config.Config) {
 		Expires:  time.Now().Add(cfg.RefreshExpiry),
 		Secure:   cfg.CookieSecure,
 		HTTPOnly: true,
-		SameSite: "Strict",
+		SameSite: "Lax", // Changed from Strict — Cloudflare tunnel breaks SameSite=Strict+Secure cookies
 	})
 	clearLegacyRefreshCookie(c, cfg)
 }
@@ -300,7 +300,7 @@ func clearRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
 		Expires:  time.Unix(0, 0),
 		Secure:   cfg.CookieSecure,
 		HTTPOnly: true,
-		SameSite: "Strict",
+		SameSite: "Lax", // Changed from Strict — Cloudflare tunnel breaks SameSite=Strict+Secure cookies
 	})
 	clearLegacyRefreshCookie(c, cfg)
 }
@@ -316,7 +316,7 @@ func clearLegacyRefreshCookie(c *fiber.Ctx, cfg *config.Config) {
 		secureAttr = "; Secure"
 	}
 	// Manually append the Set-Cookie header so Fiber doesn't overwrite the primary cookie
-	cookieHeader := fmt.Sprintf("%s=; Path=/api/auth%s; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly%s; SameSite=Strict",
+	cookieHeader := fmt.Sprintf("%s=; Path=/api/auth%s; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly%s; SameSite=Lax",
 		refreshCookieName, domainAttr, secureAttr)
 	c.Append("Set-Cookie", cookieHeader)
 }
